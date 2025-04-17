@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>3d_voxelCat_04</title>
+    <meta charset="utf-8" />
+    <!-- Compiled w/ P5LIVE, http://github.com/ffd8/p5live -->
+    <style type="text/css">
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: -1;
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+      }
+    </style>
+    <script type="text/javascript">
+      // eco-mode = only render if window focused
+      window.onblur = function () {
+        noLoop();
+      };
+      window.onfocus = function () {
+        loop();
+      };
+    </script>
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.0/p5.min.js"
+    ></script>
+    <!-- <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"
+    ></script> -->
+    <script type="text/javascript" src="libs/p5.asciify.umd.js"></script>
+  </head>
+  <body>
+    <script type="text/javascript" src="ascii.js"></script>
+  </body>
+</html>
