@@ -61,6 +61,7 @@
         orbitControl(4, 4, 0.3);
         rotateY(radians(-frameCount));
         noStroke();
+        //normalMaterial();
         scale(-300);
         model(obj);
 
