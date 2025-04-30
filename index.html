@@ -18,6 +18,17 @@
         height: 100vh;
         margin: 0;
       }
+      #drop_zone {
+        border: 5px double #333;
+        padding: 5% 10%;
+        margin-top: 70px;
+        background-color: #fff;
+        cursor: pointer;
+        position: absolute;
+      }
+      #file-input {
+        opacity: 0;
+      }
     </style>
     <script type="text/javascript">
       // eco-mode = only render if window focused
@@ -39,6 +50,17 @@
     <script type="text/javascript" src="libs/p5.asciify.umd.js"></script>
   </head>
   <body>
-    <script type="text/javascript" src="testfileinput.js"></script>
+    <!-- <div
+      id="drop_zone"
+      ondrop="dropHandler(event);"
+      ondragover="dragOverHandler(event);"
+    >
+      <p>Drag a file to this <i>drop zone</i>.</p>
+    </div> -->
+    <button onclick="document.getElementById('file-input').click()">
+      Upload OBJ
+    </button>
+    <input type="file" id="file-input" name="file-input" accept=".obj" />
+    <script type="text/javascript" src="pastebin-obj.js"></script>
   </body>
 </html>

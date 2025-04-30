@@ -1,64 +1,31 @@
-      /* CUSTOM FUNCTIONS FOR P5LIVE */
-      // keep fullscreen if window resized
-      function windowResized() {
-        resizeCanvas(windowWidth, windowHeight);
-      }
+let objModel
 
-      // custom ease function
-      function ease(iVal, oVal, eVal) {
-        return (oVal += (iVal - oVal) * eVal);
-      }
-
-      // processing compatibility
-      function println(msg) {
-        print(msg);
-      }
-
-
-let objModel;
+function preload() {
+  objModel = loadModel("3d/mushrooms1.obj");
+}
 
 function setup() {
-  createCanvas(windowWidth, windowHeight, WEBGL);
-  createFileInput(handleFile).attribute('accept', '.obj');
+  createCanvas(400, 400, WEBGL);
+  let input = createFileInput(handleFile);
+  input.position(10, 10);
 }
 
 function handleFile(file) {
-  if (!file || !file.file || !file.name.endsWith('.obj')) {
-    console.warn('⚠️ Not a valid OBJ file');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    const content = e.target.result;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-
-    loadModel(url, true,
-      model => {
-        console.log("✅ Model loaded from blob");
-        objModel = model;
-      },
-      err => {
-        console.error("❌ Failed to load model:", err);
-      }
-    );
-  };
-  reader.readAsText(file.file);
+  let blobUrl = URL.createObjectURL(file.file);
+  objModel = loadModel(file.file);
 }
 
-function draw() {
-  background(30);
-  orbitControl();
-  rotateY(frameCount * 0.01);
+function draw() { 
+  background(0);
+  orbitControl(4, 4, 0.3);
+  rotateY(radians(-frameCount));
+  noStroke();
+  //normalMaterial();
+  scale(-300);
   if (objModel) {
-    scale(200);
-    noStroke();
-    normalMaterial();
     model(objModel);
-  } else {
-    fill(255);
-    textAlign(CENTER, CENTER);
-    text("Upload an OBJ file to view it", 0, 0);
+  }
+  else {
+    console.log('❌ Kein Modell geladen!');
   }
 }
