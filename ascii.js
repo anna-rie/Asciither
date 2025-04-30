@@ -26,9 +26,11 @@
       let asciiBrightness;
 
       let fontSizeSlider;
+      // let fontSizeVal = 50;
+      let size;
 
       function preload() {
-        obj = loadModel("3d/VoxelCat2.obj");
+        obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
       }
 
       function setup() {
@@ -37,7 +39,7 @@
           format: FLOAT,
         });
         fill(255, 0, 0, 50);
-        fontSizeSlider = createSlider(5, 50, 50, 5);
+        fontSizeSlider = createSlider(5, 50, 30, 5);
         fontSizeSlider.position(10, 10);
         fontSizeSlider.size(80);
 
@@ -46,9 +48,10 @@
 
       function setupAsciify() {
         p5asciify.fontSize(size);
+        console.log("setupAsciify");
         //p5asciify.renderers().get("brightness").invert(true);
         p5asciify.renderers().get("brightness").update({
-          characters: "1234567890",
+          characters: "0123456789",
         });
       }
 
@@ -57,12 +60,13 @@
         p5asciify.fontSize(size);
         sketchFramebuffer.begin();
 
+
         background(0);
         orbitControl(4, 4, 0.3);
         rotateY(radians(-frameCount));
         noStroke();
         //normalMaterial();
-        scale(-30);
+        scale(-3);
         model(obj);
 
         sketchFramebuffer.end();
@@ -95,10 +99,13 @@
         if (key === "A" || key === "a") {
           asciiEnabled = !asciiEnabled;
           if (asciiEnabled) {
+            // setupAsciify()
             p5asciify.renderers().enable();
-            //setupAsciify()
           } else {
             p5asciify.renderers().disable();
           }
         }
       }
+
+      console.log("p5asciify", p5asciify);
+      console.log(p5asciify.renderers().list());
