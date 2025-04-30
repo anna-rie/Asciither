@@ -100,9 +100,9 @@
           asciiEnabled = !asciiEnabled;
           if (asciiEnabled) {
             // setupAsciify()
-            p5asciify.renderers().enable();
+            p5asciify.renderers().get("brightness").enable();
           } else {
-            p5asciify.renderers().disable();
+            p5asciify.renderers().get("brightness").disable();
           }
         }
       }
