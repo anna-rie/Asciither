@@ -62,13 +62,33 @@
         rotateY(radians(-frameCount));
         noStroke();
         //normalMaterial();
-        scale(-300);
+        scale(-30);
         model(obj);
 
         sketchFramebuffer.end();
 
         image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2);
       }
+
+
+      function readFile(theFile){
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var data = e.target.result
+     
+            // sets p5 shape here
+            obj = createModel(data, '.obj', true)
+        };
+        // load into reader above
+        reader.readAsText(theFile);   
+    }
+    
+    document.getElementById("file-input").addEventListener("change", function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            readFile(file);
+        }
+    });
 
       //toggle ascii
       function keyPressed() {
