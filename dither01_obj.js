@@ -15,7 +15,7 @@
       }
 
 /* CODE */
-let model;
+let obj;
 let pg;
 let bayerMatrix = [
   [0, 8, 2, 10],
@@ -27,7 +27,7 @@ let matrixSize = 4;
 let thresholdMap = [];
 
 function preload() {
-  model = loadModel("3d/VoxelCat2.obj", {normalize: true});
+  obj = loadModel("3d/VoxelCat2.obj", {normalize: true});
 }
 
 function setup() {
@@ -60,7 +60,7 @@ function draw() {
     pg.rotateY(frameCount * 0.01);
     pg.scale(-5);
     pg.normalMaterial();
-    pg.model(model);
+    pg.model(obj);
     pg.pop();
     pg.loadPixels();
 
@@ -78,8 +78,8 @@ function draw() {
       dithered.pixels[index + 3] = 255; // Alpha-Kanal
     }
   }
-    dithered.updatePixels();
+  dithered.updatePixels();
 
-    // draw dithered result to main canvas
-    image(dithered, 0, 0);
+  noSmooth();
+image(dithered, 0, 0);
 }
