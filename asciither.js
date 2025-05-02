@@ -1,0 +1,220 @@
+/* CUSTOM FUNCTIONS FOR P5LIVE */
+      // keep fullscreen if window resized
+      function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+      }
+
+      // custom ease function
+      function ease(iVal, oVal, eVal) {
+        return (oVal += (iVal - oVal) * eVal);
+      }
+
+      // processing compatibility
+      function println(msg) {
+        print(msg);
+      }
+/* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/ 
+// combined code for ascii and dither, still issues with the toggle and i need to clear more variables etc when switching, also setup and createcanvas are problems     
+/* CODE */
+/* ASCII + DITHER SETUP */
+let libs = ["libs/p5.asciify.umd.js"];
+let obj;
+
+let sketchFramebuffer;
+let asciiEnabled = true;
+let asciiBrightness;
+let fontSizeSlider;
+let size;
+// ---
+let pg;
+let blockSize = 4 // grösser = gröber
+let rotationY = 0;
+let bayerMatrix = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5]
+];
+let matrixSize = 4;
+let thresholdMap = [];
+
+function preload() {
+    obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
+  }
+
+function setup() {
+    createCanvas(windowWidth, windowHeight, WEBGL);
+    pixelDensity(1);
+    if (asciiEnabled) {
+        setupAscii();
+      } else {
+        setupDither();
+      }
+    setupShared();
+    console.log("setup");
+}
+    
+
+function draw() {
+    if (asciiEnabled) {
+        drawAscii();
+      } else {
+        drawDither();
+      }
+    }
+
+
+/* ASCII CODE SECTION */
+
+function setupAscii(){
+     // <- clear previous canvas here?
+    //createCanvas(windowWidth, windowHeight, WEBGL);
+    sketchFramebuffer = createFramebuffer({
+        format: FLOAT,
+    });
+    fill(255, 0, 0, 50);
+    //fontSizeSlider.show();
+}
+
+function drawAscii() {
+    let size = fontSizeSlider.value();
+    p5asciify.fontSize(size);
+    sketchFramebuffer.begin();
+
+
+    background(0);
+    orbitControl(4, 4, 0.3);
+    rotateY(radians(-frameCount));
+    noStroke();
+    //normalMaterial();
+    scale(-3);
+    model(obj);
+
+    sketchFramebuffer.end();
+
+    image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2);
+}
+
+function setupAsciify() {
+    p5asciify.fontSize(size);
+    //console.log("setupAsciify");
+    //p5asciify.renderers().get("brightness").invert(true);
+    p5asciify.renderers().get("brightness").update({
+      characters: "0123456789",
+    });
+  }
+
+
+/* DITHER CODE SECTION */
+
+function setupDither(){
+    // <- clear previous canvas here?
+    //createCanvas(windowWidth, windowHeight);
+    pixelDensity(1);
+
+    pg = createGraphics(width, height, WEBGL);
+    pg.pixelDensity(1);
+
+    //fontSizeSlider.hide();
+
+    for (let y = 0; y < matrixSize; y++) {
+        thresholdMap[y] = [];
+        for (let x = 0; x < matrixSize; x++) {
+        thresholdMap[y][x] = (bayerMatrix[y][x] + 0.5) / (matrixSize * matrixSize);
+        }
+    }
+}
+
+function drawDither() {
+    background(0);
+
+    rotationY += 0.001 * deltaTime;
+  
+    // Render scene
+    pg.background(255);
+    pg.push();
+    pg.orbitControl();
+    pg.rotateY(rotationY);
+    pg.scale(-5);
+    pg.normalMaterial();
+    pg.model(obj);
+    pg.pop();
+    pg.loadPixels();
+  
+    loadPixels();
+  
+    for (let y = 0; y < height; y += blockSize) {
+      for (let x = 0; x < width; x += blockSize) {
+        // Mittelwert der Helligkeit im Block berechnen
+        let avg = 0;
+        for (let by = 0; by < blockSize; by++) {
+          for (let bx = 0; bx < blockSize; bx++) {
+            let px = x + bx;
+            let py = y + by;
+            if (px < width && py < height) {
+              let index = (px + py * width) * 4;
+              avg += pg.pixels[index]; // red channel
+            }
+          }
+        }
+        avg /= (blockSize * blockSize);
+  
+        // Bayer-Schwelle vergleichen
+        let mx = (x / blockSize) % matrixSize;
+        let my = (y / blockSize) % matrixSize;
+        let threshold = thresholdMap[my][mx] * 255;
+        let colorVal = avg < threshold ? 0 : 255;
+  
+        // Block einfärben
+        fill(colorVal);
+        noStroke();
+        rect(x, y, blockSize, blockSize);
+      }
+    }
+}
+
+/* ASCII + DITHER FUNCTIONS */
+
+function setupShared() {
+    fontSizeSlider = createSlider(5, 50, 30, 5);
+    fontSizeSlider.position(10, 10);
+    fontSizeSlider.size(80);
+}
+
+
+function readFile(theFile){
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var data = e.target.result
+ 
+        // sets p5 shape here
+        obj = createModel(data, '.obj', true)
+    };
+    // load into reader above
+    reader.readAsText(theFile);   
+}
+
+document.getElementById("file-input").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        readFile(file);
+    }
+});
+
+//toggle ascii with "a" key
+function keyPressed() {
+    if (key === "A" || key === "a") {
+      asciiEnabled = !asciiEnabled;
+      if (asciiEnabled) {
+        // <- setupAscii() here?
+        setupAscii();
+        p5asciify.renderers().get("brightness").enable();
+      } else {
+        p5asciify.renderers().get("brightness").disable();
+        setupDither();
+      }
+    }
+  }
+
+
+/* ----------- unsorted code below */

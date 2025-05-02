@@ -17,6 +17,8 @@
 /* CODE */
 let obj;
 let pg;
+let blockSize = 4 // grösser = gröber
+let rotationY = 0;
 let bayerMatrix = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
@@ -37,49 +39,58 @@ function setup() {
   pg = createGraphics(width, height, WEBGL);
   pg.pixelDensity(1);
 
-  // Normierte Bayer-Matrix erstellen
   for (let y = 0; y < matrixSize; y++) {
     thresholdMap[y] = [];
     for (let x = 0; x < matrixSize; x++) {
       thresholdMap[y][x] = (bayerMatrix[y][x] + 0.5) / (matrixSize * matrixSize);
     }
   }
-
-  // applyDithering();
-  // img.updatePixels();
-  // image(img, 0, 0);
 }
 
 function draw() {
-    background(0);
+  background(0);
 
-    // render obj model to buffer
-    pg.background(255);
-    pg.push();
-    pg.orbitControl();
-    pg.rotateY(frameCount * 0.01);
-    pg.scale(-5);
-    pg.normalMaterial();
-    pg.model(obj);
-    pg.pop();
-    pg.loadPixels();
+  rotationY += 0.001 * deltaTime;
 
-    // dither it using my bayer matrix
-    let dithered = createImage(pg.width, pg.height);
-    dithered.loadPixels();
+  // Render scene
+  pg.background(255);
+  pg.push();
+  pg.orbitControl();
+  pg.rotateY(rotationY);
+  pg.scale(-5);
+  pg.normalMaterial();
+  pg.model(obj);
+  pg.pop();
+  pg.loadPixels();
 
-  for (let y = 0; y < pg.height; y++) {
-    for (let x = 0; x < pg.width; x++) {
-      let index = (x + y * pg.width) * 4;
-      let brightness = pg.pixels[index]; // Graustufen-Wert... angeblich red channel?
-      let threshold = thresholdMap[y % matrixSize][x % matrixSize] * 255;
-      let newColor = brightness < threshold ? 0 : 255;
-      dithered.pixels[index] = dithered.pixels[index + 1] = dithered.pixels[index + 2] = newColor;
-      dithered.pixels[index + 3] = 255; // Alpha-Kanal
+  loadPixels();
+
+  for (let y = 0; y < height; y += blockSize) {
+    for (let x = 0; x < width; x += blockSize) {
+      // Mittelwert der Helligkeit im Block berechnen
+      let avg = 0;
+      for (let by = 0; by < blockSize; by++) {
+        for (let bx = 0; bx < blockSize; bx++) {
+          let px = x + bx;
+          let py = y + by;
+          if (px < width && py < height) {
+            let index = (px + py * width) * 4;
+            avg += pg.pixels[index]; // red channel
+          }
+        }
+      }
+      avg /= (blockSize * blockSize);
+
+      // Bayer-Schwelle vergleichen
+      let mx = (x / blockSize) % matrixSize;
+      let my = (y / blockSize) % matrixSize;
+      let threshold = thresholdMap[my][mx] * 255;
+      let colorVal = avg < threshold ? 0 : 255;
+
+      // Block einfärben
+      fill(colorVal);
+      noStroke();
+      rect(x, y, blockSize, blockSize);
     }
   }
-  dithered.updatePixels();
-
-  noSmooth();
-image(dithered, 0, 0);
 }
