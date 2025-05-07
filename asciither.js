@@ -27,7 +27,7 @@ let fontSizeSlider;
 let size;
 // ---
 let pg;
-let blockSize = 4 // grösser = gröber
+let blockSize = 10 // grösser = gröber
 let rotationY = 0;
 let bayerMatrix = [
   [0, 8, 2, 10],
@@ -56,6 +56,7 @@ function setup() {
     
 
 function draw() {
+    rotationY -= 0.0009 * deltaTime;
     if (asciiEnabled) {
         drawAscii();
       } else {
@@ -84,7 +85,8 @@ function drawAscii() {
 
     background(0);
     orbitControl(4, 4, 0.3);
-    rotateY(radians(-frameCount));
+    //rotateY(radians(-frameCount));
+    rotateY(rotationY);
     noStroke();
     //normalMaterial();
     scale(-3);
@@ -128,14 +130,14 @@ function setupDither(){
 function drawDither() {
     background(0);
 
-    rotationY += 0.001 * deltaTime;
+    
   
     // Render scene
     pg.background(255);
     pg.push();
     pg.orbitControl();
     pg.rotateY(rotationY);
-    pg.scale(-5);
+    pg.scale(-3);
     pg.normalMaterial();
     pg.model(obj);
     pg.pop();
@@ -166,16 +168,20 @@ function drawDither() {
         let colorVal = avg < threshold ? 0 : 255;
   
         // Block einfärben
+        push();
         fill(colorVal);
         noStroke();
+        resetMatrix(); // resets the WEBGL transform
+translate(-width / 2, -height / 2); // shift origin to top-left
         rect(x, y, blockSize, blockSize);
+        pop();
       }
     }
 }
 
 /* ASCII + DITHER FUNCTIONS */
 
-function setupShared() {
+function setupShared() {    
     fontSizeSlider = createSlider(5, 50, 30, 5);
     fontSizeSlider.position(10, 10);
     fontSizeSlider.size(80);
