@@ -13,18 +13,21 @@
       function println(msg) {
         print(msg);
       }
-/* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/ 
-// combined code for ascii and dither, still issues with the toggle and i need to clear more variables etc when switching, also setup and createcanvas are problems     
+/* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/    
+/* what next:
+fake orbit control, more GUIs, dither size, color controls, which ascii characters, experimentation, export options, .mtl?, layers, background images / objects */
 /* CODE */
 /* ASCII + DITHER SETUP */
-let libs = ["libs/p5.asciify.umd.js"];
+
+//let libs = ["libs/p5.asciify.umd.js"];
 let obj;
 
 let sketchFramebuffer;
 let asciiEnabled = true;
 let asciiBrightness;
-let fontSizeSlider;
-let size;
+let sliderFontSize;
+let fontSize;
+let toggleAscii;
 // ---
 let pg;
 let blockSize = 10 // grösser = gröber
@@ -68,18 +71,22 @@ function draw() {
 /* ASCII CODE SECTION */
 
 function setupAscii(){
+
+  sliderFontSize = createSlider(5, 50, 30, 5);
+  sliderFontSize.position(10, 75);
+  sliderFontSize.size(80);
      // <- clear previous canvas here?
     //createCanvas(windowWidth, windowHeight, WEBGL);
     sketchFramebuffer = createFramebuffer({
         format: FLOAT,
     });
     fill(255, 0, 0, 50);
-    //fontSizeSlider.show();
+    //sliderFontSize.show();
 }
 
 function drawAscii() {
-    let size = fontSizeSlider.value();
-    p5asciify.fontSize(size);
+    fontSize = sliderFontSize.value();
+    p5asciify.fontSize(fontSize);
     sketchFramebuffer.begin();
 
 
@@ -98,7 +105,7 @@ function drawAscii() {
 }
 
 function setupAsciify() {
-    p5asciify.fontSize(size);
+    p5asciify.fontSize(fontSize);
     //console.log("setupAsciify");
     //p5asciify.renderers().get("brightness").invert(true);
     p5asciify.renderers().get("brightness").update({
@@ -117,7 +124,7 @@ function setupDither(){
     pg = createGraphics(width, height, WEBGL);
     pg.pixelDensity(1);
 
-    //fontSizeSlider.hide();
+    //sliderFontSize.hide();
 
     for (let y = 0; y < matrixSize; y++) {
         thresholdMap[y] = [];
@@ -182,9 +189,13 @@ translate(-width / 2, -height / 2); // shift origin to top-left
 /* ASCII + DITHER FUNCTIONS */
 
 function setupShared() {    
-    fontSizeSlider = createSlider(5, 50, 30, 5);
-    fontSizeSlider.position(10, 10);
-    fontSizeSlider.size(80);
+  toggleAscii = createCheckbox("ascii", true);
+  toggleAscii.style("color", "white");
+  toggleAscii.position(10, 50);
+  toggleAscii.changed(toggleMode);
+  
+  
+  
 }
 
 
@@ -207,20 +218,33 @@ document.getElementById("file-input").addEventListener("change", function(event)
     }
 });
 
-//toggle ascii with "a" key
+let toggleNoAscii = false;
+console.log("toggleNoAscii: " + toggleNoAscii);
+
 function keyPressed() {
     if (key === "A" || key === "a") {
-      asciiEnabled = !asciiEnabled;
-      if (asciiEnabled) {
-        // <- setupAscii() here?
-        setupAscii();
-        p5asciify.renderers().get("brightness").enable();
-      } else {
+      toggleNoAscii = !toggleNoAscii;
+      console.log("keypressed, " + toggleNoAscii);
+      if (toggleNoAscii) {
         p5asciify.renderers().get("brightness").disable();
-        setupDither();
+        console.log("disable");
+      } else {
+        p5asciify.renderers().get("brightness").enable();
+        console.log("enable");
       }
     }
   }
+
+function toggleMode() {
+  asciiEnabled = toggleAscii.checked();
+  if (asciiEnabled) {
+    setupAscii();
+    p5asciify.renderers().get("brightness").enable();
+  } else {
+    p5asciify.renderers().get("brightness").disable();
+    setupDither();
+  }
+}
 
 
 /* ----------- unsorted code below */

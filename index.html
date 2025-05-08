@@ -9,6 +9,7 @@
         background: black;
         margin: 0;
         overflow: hidden;
+        font-family: "Courier New", Courier, monospace;
       }
       canvas {
         position: fixed;
@@ -18,6 +19,19 @@
         width: 100vw;
         height: 100vh;
         margin: 0;
+      }
+      button {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1;
+        background-color: #fff;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 16px;
+        cursor: pointer;
       }
       /* #drop_zone {
         border: 5px double #333;
@@ -45,6 +59,10 @@
       src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.0/p5.min.js"
     ></script>
     <script type="text/javascript" src="libs/p5.asciify.umd.js"></script>
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.min.js"
+    ></script>
   </head>
   <body>
     <button onclick="document.getElementById('file-input').click()">
