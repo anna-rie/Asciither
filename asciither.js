@@ -21,13 +21,24 @@ fake orbit control, more GUIs, dither size, color controls, which ascii characte
 
 //let libs = ["libs/p5.asciify.umd.js"];
 let obj;
+let gui;
+let asciiFolder, ditherFolder, sharedFolder;
+let params = {
+  asciiMode: true,
+  fontSize: 30,
+  blockSize: 4,
+  sharedValue: 0.5
+};
+
+// use local storage here maybe
 
 let sketchFramebuffer;
-let asciiEnabled = true;
+
+let asciiEnabled = true; //main toggle variable
 let asciiBrightness;
-let sliderFontSize;
-let fontSize;
-let toggleAscii;
+let sliderFontSize; //remove after new gui
+let fontSize; //remove after new gui
+let toggleAscii; //remove after new gui
 // ---
 let pg;
 let blockSize = 10 // grösser = gröber
@@ -50,11 +61,14 @@ function setup() {
     pixelDensity(1);
     if (asciiEnabled) {
         setupAscii();
+        console.log("function setup setupAscii");
       } else {
         setupDither();
       }
     setupShared();
-    console.log("setup");
+    setupGui();
+    // toggleMode(true);
+    // console.log("setup");
 }
     
 
@@ -71,16 +85,16 @@ function draw() {
 /* ASCII CODE SECTION */
 
 function setupAscii(){
-
+  console.log("function setupAscii");
   sliderFontSize = createSlider(5, 50, 30, 5);
   sliderFontSize.position(10, 75);
   sliderFontSize.size(80);
-     // <- clear previous canvas here?
-    //createCanvas(windowWidth, windowHeight, WEBGL);
-    sketchFramebuffer = createFramebuffer({
-        format: FLOAT,
-    });
-    fill(255, 0, 0, 50);
+  // <- clear previous canvas here?
+  //createCanvas(windowWidth, windowHeight, WEBGL);
+  sketchFramebuffer = createFramebuffer({
+    format: FLOAT,
+  });
+  fill(255, 0, 0, 50);
     //sliderFontSize.show();
 }
 
@@ -193,9 +207,41 @@ function setupShared() {
   toggleAscii.style("color", "white");
   toggleAscii.position(10, 50);
   toggleAscii.changed(toggleMode);
-  
-  
-  
+}
+
+function setupGui() {
+    gui = new dat.GUI();
+
+    //shared folder
+    sharedFolder = gui.addFolder("Settings");
+    sharedFolder.add(params, "asciiMode").name("Tool Mode").onChange(toggleMode);
+    sharedFolder.add(params, "sharedValue", 0, 1).name("sharedValue");
+
+    //ascii folder
+    asciiFolder = gui.addFolder("ASCII");
+    asciiFolder.add(params, "fontSize", 5, 50, 1).name("Font Size").onChange(val => {
+      if (typeof p5asciify !== "undefined") {
+        p5asciify.fontSize(val);
+      }
+    });
+
+    //dither folder
+    ditherFolder = gui.addFolder("Dither");
+    ditherFolder.add(params, "blockSize", 1, 20, 1).name("Block Size");
+    
+    updateGui();
+
+}
+
+function updateGui() {
+  if (params.asciiMode) {
+    toggleFolder(asciiFolder, true);
+    toggleFolder(ditherFolder, false);
+  } else {
+    toggleFolder(asciiFolder, false);
+    toggleFolder(ditherFolder, true);
+  }
+
 }
 
 
@@ -218,33 +264,54 @@ document.getElementById("file-input").addEventListener("change", function(event)
     }
 });
 
-let toggleNoAscii = false;
-console.log("toggleNoAscii: " + toggleNoAscii);
+// let toggleNoAscii = false;
+// console.log("toggleNoAscii: " + toggleNoAscii);
 
-function keyPressed() {
-    if (key === "A" || key === "a") {
-      toggleNoAscii = !toggleNoAscii;
-      console.log("keypressed, " + toggleNoAscii);
-      if (toggleNoAscii) {
-        p5asciify.renderers().get("brightness").disable();
-        console.log("disable");
-      } else {
-        p5asciify.renderers().get("brightness").enable();
-        console.log("enable");
-      }
-    }
-  }
+// function keyPressed() {
+//     if (key === "A" || key === "a") {
+//       toggleNoAscii = !toggleNoAscii;
+//       console.log("keypressed, " + toggleNoAscii);
+//       if (toggleNoAscii) {
+//         p5asciify.renderers().get("brightness").disable();
+//         console.log("disable");
+//       } else {
+//         p5asciify.renderers().get("brightness").enable();
+//         console.log("enable");
+//       }
+//     }
+//   }
 
-function toggleMode() {
-  asciiEnabled = toggleAscii.checked();
+// function toggleMode() {
+//   asciiEnabled = toggleAscii.checked();
+//   if (asciiEnabled) {
+//     setupAscii();
+//     p5asciify.renderers().get("brightness").enable();
+//   } else {
+//     p5asciify.renderers().get("brightness").disable();
+//     setupDither();
+//   }
+// }
+
+function toggleMode(init = false) {
+  asciiEnabled = params.asciiMode;
+
+  // Show/hide folders depending on mode
   if (asciiEnabled) {
     setupAscii();
     p5asciify.renderers().get("brightness").enable();
   } else {
     p5asciify.renderers().get("brightness").disable();
-    setupDither();
+      setupDither();
   }
+  updateGui();
 }
 
+function toggleFolder(folder, show) {
+  if (show) {
+    folder.domElement.style.display = "";
+  } else {
+    folder.domElement.style.display = "none";
+  }
+}
 
 /* ----------- unsorted code below */
