@@ -29,12 +29,15 @@ let params = {
   blockSize: 4,
   sharedValue: 0.5
 };
-
+let actions = {
+  uploadObj: () => {
+    document.getElementById("file-input").click();
+  }
+}
 // use local storage here maybe
 
 let sketchFramebuffer;
 
-let asciiEnabled = true; //main toggle variable
 let asciiBrightness;
 let sliderFontSize; //remove after new gui
 let fontSize; //remove after new gui
@@ -59,7 +62,7 @@ function preload() {
 function setup() {
     createCanvas(windowWidth, windowHeight, WEBGL);
     pixelDensity(1);
-    if (asciiEnabled) {
+    if (params.asciiMode) {
         setupAscii();
         console.log("function setup setupAscii");
       } else {
@@ -74,7 +77,7 @@ function setup() {
 
 function draw() {
     rotationY -= 0.0009 * deltaTime;
-    if (asciiEnabled) {
+    if (params.asciiMode) {
         drawAscii();
       } else {
         drawDither();
@@ -85,10 +88,10 @@ function draw() {
 /* ASCII CODE SECTION */
 
 function setupAscii(){
-  console.log("function setupAscii");
-  sliderFontSize = createSlider(5, 50, 30, 5);
-  sliderFontSize.position(10, 75);
-  sliderFontSize.size(80);
+  // console.log("function setupAscii");
+  // sliderFontSize = createSlider(5, 50, 30, 5);
+  // sliderFontSize.position(10, 75);
+  // sliderFontSize.size(80);
   // <- clear previous canvas here?
   //createCanvas(windowWidth, windowHeight, WEBGL);
   sketchFramebuffer = createFramebuffer({
@@ -99,10 +102,9 @@ function setupAscii(){
 }
 
 function drawAscii() {
-    fontSize = sliderFontSize.value();
+    fontSize = params.fontSize;
     p5asciify.fontSize(fontSize);
     sketchFramebuffer.begin();
-
 
     background(0);
     orbitControl(4, 4, 0.3);
@@ -123,7 +125,7 @@ function setupAsciify() {
     //console.log("setupAsciify");
     //p5asciify.renderers().get("brightness").invert(true);
     p5asciify.renderers().get("brightness").update({
-      characters: "0123456789",
+      characters: "%&asdf0123456789",
     });
   }
 
@@ -203,10 +205,10 @@ translate(-width / 2, -height / 2); // shift origin to top-left
 /* ASCII + DITHER FUNCTIONS */
 
 function setupShared() {    
-  toggleAscii = createCheckbox("ascii", true);
-  toggleAscii.style("color", "white");
-  toggleAscii.position(10, 50);
-  toggleAscii.changed(toggleMode);
+  // toggleAscii = createCheckbox("ascii", true);
+  // toggleAscii.style("color", "white");
+  // toggleAscii.position(10, 50);
+  // toggleAscii.changed(toggleMode);
 }
 
 function setupGui() {
@@ -214,12 +216,13 @@ function setupGui() {
 
     //shared folder
     sharedFolder = gui.addFolder("Settings");
+    sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
     sharedFolder.add(params, "asciiMode").name("Tool Mode").onChange(toggleMode);
-    sharedFolder.add(params, "sharedValue", 0, 1).name("sharedValue");
+    //sharedFolder.add(params, "sharedValue", 0, 1).name("sharedValue");
 
     //ascii folder
     asciiFolder = gui.addFolder("ASCII");
-    asciiFolder.add(params, "fontSize", 5, 50, 1).name("Font Size").onChange(val => {
+    asciiFolder.add(params, "fontSize", 5, 60, 1).name("Font Size").onChange(val => {
       if (typeof p5asciify !== "undefined") {
         p5asciify.fontSize(val);
       }
@@ -230,20 +233,21 @@ function setupGui() {
     ditherFolder.add(params, "blockSize", 1, 20, 1).name("Block Size");
     
     updateGui();
-
 }
 
 function updateGui() {
+  sharedFolder.open();
   if (params.asciiMode) {
     toggleFolder(asciiFolder, true);
+    asciiFolder.open();
     toggleFolder(ditherFolder, false);
   } else {
     toggleFolder(asciiFolder, false);
     toggleFolder(ditherFolder, true);
+    ditherFolder.open();
   }
 
 }
-
 
 function readFile(theFile){
     var reader = new FileReader();
@@ -264,39 +268,11 @@ document.getElementById("file-input").addEventListener("change", function(event)
     }
 });
 
-// let toggleNoAscii = false;
-// console.log("toggleNoAscii: " + toggleNoAscii);
-
-// function keyPressed() {
-//     if (key === "A" || key === "a") {
-//       toggleNoAscii = !toggleNoAscii;
-//       console.log("keypressed, " + toggleNoAscii);
-//       if (toggleNoAscii) {
-//         p5asciify.renderers().get("brightness").disable();
-//         console.log("disable");
-//       } else {
-//         p5asciify.renderers().get("brightness").enable();
-//         console.log("enable");
-//       }
-//     }
-//   }
-
-// function toggleMode() {
-//   asciiEnabled = toggleAscii.checked();
-//   if (asciiEnabled) {
-//     setupAscii();
-//     p5asciify.renderers().get("brightness").enable();
-//   } else {
-//     p5asciify.renderers().get("brightness").disable();
-//     setupDither();
-//   }
-// }
-
 function toggleMode(init = false) {
-  asciiEnabled = params.asciiMode;
+  params.asciiMode = params.asciiMode;
 
   // Show/hide folders depending on mode
-  if (asciiEnabled) {
+  if (params.asciiMode) {
     setupAscii();
     p5asciify.renderers().get("brightness").enable();
   } else {
