@@ -26,7 +26,7 @@ let asciiFolder, ditherFolder, sharedFolder;
 let params = {
   asciiMode: true,
   fontSize: 30,
-  blockSize: 4,
+  blockSize: 10,
   sharedValue: 0.5
 };
 let actions = {
@@ -44,7 +44,7 @@ let fontSize; //remove after new gui
 let toggleAscii; //remove after new gui
 // ---
 let pg;
-let blockSize = 10 // grösser = gröber
+//let blockSize = 10 // grösser = gröber
 let rotationY = 0;
 let bayerMatrix = [
   [0, 8, 2, 10],
@@ -152,7 +152,7 @@ function setupDither(){
 
 function drawDither() {
     background(0);
-
+    let blockSize = params.blockSize;
     
   
     // Render scene
@@ -230,7 +230,7 @@ function setupGui() {
 
     //dither folder
     ditherFolder = gui.addFolder("Dither");
-    ditherFolder.add(params, "blockSize", 1, 20, 1).name("Block Size");
+    ditherFolder.add(params, "blockSize", 8, 25, 1).name("Block Size");
     
     updateGui();
 }
