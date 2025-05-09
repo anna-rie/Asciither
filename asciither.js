@@ -24,10 +24,15 @@ let obj;
 let gui;
 let asciiFolder, ditherFolder, sharedFolder;
 let params = {
-  asciiMode: true,
+  mode: "Ascii",
+  bgColor: "#000000",
   fontSize: 30,
-  blockSize: 10,
-  sharedValue: 0.5
+  fontColor: "#ff0000",
+  fontAlpha: 0.25,
+  normalMaterial: false,
+  charactersInput: "0123456789",
+  blockSize: 15,
+  ditherColor: "#000000",
 };
 let actions = {
   uploadObj: () => {
@@ -37,14 +42,8 @@ let actions = {
 // use local storage here maybe
 
 let sketchFramebuffer;
-
-let asciiBrightness;
-let sliderFontSize; //remove after new gui
-let fontSize; //remove after new gui
-let toggleAscii; //remove after new gui
 // ---
 let pg;
-//let blockSize = 10 // grösser = gröber
 let rotationY = 0;
 let bayerMatrix = [
   [0, 8, 2, 10],
@@ -54,7 +53,7 @@ let bayerMatrix = [
 ];
 let matrixSize = 4;
 let thresholdMap = [];
-
+// ---
 function preload() {
     obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
   }
@@ -62,22 +61,19 @@ function preload() {
 function setup() {
     createCanvas(windowWidth, windowHeight, WEBGL);
     pixelDensity(1);
-    if (params.asciiMode) {
+    if (params.mode === "Ascii") {
         setupAscii();
         console.log("function setup setupAscii");
       } else {
         setupDither();
       }
-    setupShared();
-    setupGui();
-    // toggleMode(true);
-    // console.log("setup");
+    setupShared(); //setup gui in there
 }
     
 
 function draw() {
     rotationY -= 0.0009 * deltaTime;
-    if (params.asciiMode) {
+    if (params.mode === "Ascii") {
         drawAscii();
       } else {
         drawDither();
@@ -88,30 +84,31 @@ function draw() {
 /* ASCII CODE SECTION */
 
 function setupAscii(){
-  // console.log("function setupAscii");
-  // sliderFontSize = createSlider(5, 50, 30, 5);
-  // sliderFontSize.position(10, 75);
-  // sliderFontSize.size(80);
-  // <- clear previous canvas here?
-  //createCanvas(windowWidth, windowHeight, WEBGL);
   sketchFramebuffer = createFramebuffer({
     format: FLOAT,
   });
   fill(255, 0, 0, 50);
-    //sliderFontSize.show();
+  let c = color(params.fontColor);
+  c.setAlpha(params.fontAlpha * 255); //convert to 0-255
+  fill(c);
+
 }
 
 function drawAscii() {
-    fontSize = params.fontSize;
-    p5asciify.fontSize(fontSize);
+    p5asciify.fontSize(params.fontSize);
     sketchFramebuffer.begin();
 
-    background(0);
+    background(params.bgColor);
     orbitControl(4, 4, 0.3);
     //rotateY(radians(-frameCount));
     rotateY(rotationY);
     noStroke();
-    //normalMaterial();
+    c = color(params.fontColor);
+    c.setAlpha(params.fontAlpha * 255); //convert to 0-255
+    fill(c);
+    if(params.normalMaterial){
+      normalMaterial();
+    }
     scale(-3);
     model(obj);
 
@@ -121,12 +118,12 @@ function drawAscii() {
 }
 
 function setupAsciify() {
-    p5asciify.fontSize(fontSize);
+    p5asciify.fontSize(params.fontSize);
     //console.log("setupAsciify");
     //p5asciify.renderers().get("brightness").invert(true);
-    p5asciify.renderers().get("brightness").update({
-      characters: "%&asdf0123456789",
-    });
+    // p5asciify.renderers().get("brightness").update({
+    //   characters: "%&asdf0123456789",
+    // });
   }
 
 
@@ -140,7 +137,6 @@ function setupDither(){
     pg = createGraphics(width, height, WEBGL);
     pg.pixelDensity(1);
 
-    //sliderFontSize.hide();
 
     for (let y = 0; y < matrixSize; y++) {
         thresholdMap[y] = [];
@@ -152,9 +148,6 @@ function setupDither(){
 
 function drawDither() {
     background(0);
-    let blockSize = params.blockSize;
-    
-  
     // Render scene
     pg.background(255);
     pg.push();
@@ -168,12 +161,12 @@ function drawDither() {
   
     loadPixels();
   
-    for (let y = 0; y < height; y += blockSize) {
-      for (let x = 0; x < width; x += blockSize) {
+    for (let y = 0; y < height; y += params.blockSize) {
+      for (let x = 0; x < width; x += params.blockSize) {
         // Mittelwert der Helligkeit im Block berechnen
         let avg = 0;
-        for (let by = 0; by < blockSize; by++) {
-          for (let bx = 0; bx < blockSize; bx++) {
+        for (let by = 0; by < params.blockSize; by++) {
+          for (let bx = 0; bx < params.blockSize; bx++) {
             let px = x + bx;
             let py = y + by;
             if (px < width && py < height) {
@@ -182,43 +175,41 @@ function drawDither() {
             }
           }
         }
-        avg /= (blockSize * blockSize);
+        avg /= (params.blockSize * params.blockSize);
   
         // Bayer-Schwelle vergleichen
-        let mx = (x / blockSize) % matrixSize;
-        let my = (y / blockSize) % matrixSize;
+        let mx = (x / params.blockSize) % matrixSize;
+        let my = (y / params.blockSize) % matrixSize;
         let threshold = thresholdMap[my][mx] * 255;
-        let colorVal = avg < threshold ? 0 : 255;
+        let colorVal = avg < threshold ? params.ditherColor : 255;
   
         // Block einfärben
         push();
         fill(colorVal);
         noStroke();
         resetMatrix(); // resets the WEBGL transform
-translate(-width / 2, -height / 2); // shift origin to top-left
-        rect(x, y, blockSize, blockSize);
+        translate(-width / 2, -height / 2); // shift origin to top-left
+        rect(x, y, params.blockSize, params.blockSize);
         pop();
       }
     }
 }
 
+
 /* ASCII + DITHER FUNCTIONS */
 
 function setupShared() {    
-  // toggleAscii = createCheckbox("ascii", true);
-  // toggleAscii.style("color", "white");
-  // toggleAscii.position(10, 50);
-  // toggleAscii.changed(toggleMode);
+  setupGui();
 }
 
 function setupGui() {
-    gui = new dat.GUI();
+    gui = new dat.GUI({width: 300});
 
     //shared folder
     sharedFolder = gui.addFolder("Settings");
     sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
-    sharedFolder.add(params, "asciiMode").name("Tool Mode").onChange(toggleMode);
-    //sharedFolder.add(params, "sharedValue", 0, 1).name("sharedValue");
+    sharedFolder.add(params, "mode", ["Ascii", "Dither"]).name("Render Mode").onChange(toggleMode);
+    sharedFolder.addColor(params, "bgColor").name("BG Color");
 
     //ascii folder
     asciiFolder = gui.addFolder("ASCII");
@@ -227,26 +218,43 @@ function setupGui() {
         p5asciify.fontSize(val);
       }
     });
+    asciiFolder.addColor(params, "fontColor").name("Font Color");
+    asciiFolder.add(params, "fontAlpha", 0, 1).step(0.01).name("Opacity");
+    asciiFolder.add(params, "normalMaterial").name("Normal Material");
+    asciiFolder.add(params, "charactersInput").name("Ascii Characters").onChange(handleAsciiCharsInput); //function in here
 
     //dither folder
     ditherFolder = gui.addFolder("Dither");
-    ditherFolder.add(params, "blockSize", 8, 25, 1).name("Block Size");
+    ditherFolder.add(params, "blockSize", 8, 25, 1).name("Pixel Size");
+    ditherFolder.addColor(params, "ditherColor").name("Dither Color");
     
     updateGui();
 }
 
+function handleAsciiCharsInput(value) {
+  if (value.length > 20) {
+    params.charactersInput = value.substring(0, 20); //or slice?
+  }
+  p5asciify.renderers().get("brightness").update({
+    characters: value,
+  });
+  console.log("ASCII characters: " + params.charactersInput);
+}
+
 function updateGui() {
+  //decide which folders to show and hide
   sharedFolder.open();
-  if (params.asciiMode) {
+  if (params.mode === "Ascii") {
     toggleFolder(asciiFolder, true);
     asciiFolder.open();
     toggleFolder(ditherFolder, false);
-  } else {
+  } else if (params.mode === "Dither") {
     toggleFolder(asciiFolder, false);
     toggleFolder(ditherFolder, true);
     ditherFolder.open();
+  } else {
+    console.error("Invalid mode");
   }
-
 }
 
 function readFile(theFile){
@@ -269,20 +277,21 @@ document.getElementById("file-input").addEventListener("change", function(event)
 });
 
 function toggleMode(init = false) {
-  params.asciiMode = params.asciiMode;
-
-  // Show/hide folders depending on mode
-  if (params.asciiMode) {
+  // Show/hide/setup renderers depending on mode
+  if (params.mode === "Ascii") {
     setupAscii();
     p5asciify.renderers().get("brightness").enable();
-  } else {
+  } else if (params.mode === "Dither") {
     p5asciify.renderers().get("brightness").disable();
       setupDither();
+  } else {
+    console.error("Invalid mode");
   }
   updateGui();
 }
 
 function toggleFolder(folder, show) {
+  //show or hide the folder
   if (show) {
     folder.domElement.style.display = "";
   } else {
