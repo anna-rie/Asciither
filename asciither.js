@@ -15,7 +15,7 @@
       }
 /* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/    
 /* what next:
-lights! fake orbit control, more GUIs, color gradients, experimentation, export options, .mtl?, layers, background images / objects */
+lights! light colors?, color gradient to object, fake orbit control, more GUIs, color gradients, experimentation, export options, .mtl?, layers, background images / objects */
 /* CODE */
 /* ASCII + DITHER SETUP */
 
@@ -52,12 +52,12 @@ let sketchFramebuffer;
 // ---
 let pg;
 let rotationY = 0;
-// let targetRot = {x: 0, y:0}; // fake orbit control 
-// let currentRot = {x:0, y:0};
-// let zoom = 50;
-// let targetZoom = 50;
-// const minZoom = 50;
-// const maxZoom = 1000;
+let targetRot = {x: 0, y:0}; // fake orbit control 
+let currentRot = {x:0, y:0};
+let zoom = 50;
+let targetZoom = 50;
+const minZoom = 50;
+const maxZoom = 1000;
 
 let bayerMatrix = [
   [0, 8, 2, 10],
@@ -87,8 +87,8 @@ function setup() {
 
 function draw() {
     rotationY -= 0.0009 * deltaTime;
-    ambientLight(1000);
-    pointLight(
+    ambientLight(100);
+    directionalLight(
       red(params.lightColor) * params.lightIntensity,
       green(params.lightColor) * params.lightIntensity,
       blue(params.lightColor) * params.lightIntensity,
@@ -178,31 +178,31 @@ function setupDither(){
     }
 }
 
-//fake orbit control functions
-// function mouseDragged() {
-//   targetRot.x += movedX / 50;
-//   targetRot.y += movedY / 50;
-// }
+// fake orbit control functions
+function mouseDragged() {
+  targetRot.x += movedY / 50;
+  targetRot.y += movedX / 50;
+}
 
-// function mouseWheel(event) {
-//   targetZoom += event.delta;
-//   targetZoom = constrain(targetZoom, minZoom, maxZoom);
-//   return false; // prevent page scrolling
-// }
+function mouseWheel(event) {
+  targetZoom += event.delta;
+  targetZoom = constrain(targetZoom, minZoom, maxZoom);
+  return false; // prevent page scrolling
+}
 
 function drawDither() {
-  // zoom = lerp(zoom, targetZoom, 0.1); //these three also fake orbit controls, buggy
-  // currentRot.x = lerp(currentRot.x, targetRot.x, 0.1);
-  // currentRot.y = lerp(currentRot.y, targetRot.y, 0.1);
-  // angleMode(DEGREES);
+  zoom = lerp(zoom, targetZoom, 0.1); //these three also fake orbit controls, buggy
+  currentRot.x = lerp(currentRot.x, targetRot.x, 0.1);
+  currentRot.y = lerp(currentRot.y, targetRot.y, 0.1);
+  angleMode(DEGREES);
   background(0);
   // Render scene
   pg.background(255);
   pg.push();
   // pg.orbitControl();
-  // pg.translate(0, 0, -zoom); //these three are fake orbit controls, buggy
-  // pg.rotateX(currentRot.x);
-  // pg.rotateY(currentRot.y);
+  pg.translate(0, 0, -zoom); //these three are fake orbit controls, buggy
+  pg.rotateX(currentRot.x);
+  pg.rotateY(currentRot.y);
   pg.rotateY(rotationY);
   pg.scale(-3);
   pg.normalMaterial();
