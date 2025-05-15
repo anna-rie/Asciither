@@ -54,13 +54,6 @@ let sketchFramebuffer;
 let pg1;
 let pg2;
 let rotationY = 0;
-// // --- fake orbit control 
-// let targetRot = {x: 0, y:0};
-// let currentRot = {x:0, y:0};
-// let zoom = 50;
-// let targetZoom = 50;
-// const minZoom = 50;
-// const maxZoom = 1000;
 // --- st-o orbit control
 const sensitivityX = 1;
 const sensitivityY = 0.5;
@@ -96,7 +89,6 @@ function setup() {
 
 function draw() {
     rotationY -= 0.0009 * deltaTime;
-    // console.log(rotationY);
     ambientLight(100);
     directionalLight(
       red(params.lightColor) * params.lightIntensity,
@@ -121,45 +113,51 @@ function setupAscii(){
     format: FLOAT,
   });
 
-  // pg1 = createGraphics(width, height, WEBGL);
-  // pg1.pixelDensity(1);
-  // cam1 = pg1.createCamera(); // st-o orbit control
-  // pg1.background(0);
+  pg1 = createGraphics(width, height, WEBGL);
+  pg1.pixelDensity(1);
+  cam1 = pg1.createCamera(); // st-o orbit control
+
+  pg1.background(0);
   fill(255, 0, 0, 50);
   let c = color(params.fontColor);
   c.setAlpha(params.fontAlpha * 255); //convert to 0-255
-  // pg1.fill(c);
+  pg1.fill(c);
 }
 
 function drawAscii() {
     p5asciify.fontSize(params.fontSize);
     sketchFramebuffer.begin();
 
-    background(params.bgColor);
-    if (!isMouseOverGUI()) {
-      orbitControl(4, 4, 0.3);
-    }
-    // orbitControl(4, 4, 0.3);
-    //rotateY(radians(-frameCount));
-    // angleMode(RADIANS);
+    pg1.push();
+    pg1.clear();
+    pg1.background(params.bgColor);
 
-    rotateY(rotationY);
+    // if (!isMouseOverGUI()) {
+    //   orbitControl(4, 4, 0.3);
+    // }
     
-    noStroke();
+    pg1.rotateY(rotationY);
+    pg1.noStroke();
+
     c = color(params.fontColor);
     c.setAlpha(params.fontAlpha * 255); //convert to 0-255
-    fill(c);
+    pg1.fill(c);
+
     if (params.invertAscii) {
       p5asciify.renderers().get("brightness").invert(true);
     } else {
       p5asciify.renderers().get("brightness").invert(false);
     }
-    if(params.normalMaterial){
-      normalMaterial();
-    }
-    scale(-3);
-    model(obj);
 
+    if(params.normalMaterial){
+      pg1.normalMaterial();
+    }
+
+    pg1.scale(-3);
+    pg1.model(obj);
+    pg1.pop();
+
+    image(pg1, -width / 2, -height / 2);
     sketchFramebuffer.end();
 
     image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2);
@@ -214,35 +212,41 @@ function mouseDragged() {
       (-sensitivityX * (mouseX - pmouseX)) / scaleFactor;
     const deltaPhi =
       (sensitivityY * (mouseY - pmouseY)) / scaleFactor;
-    cam2._orbit(deltaTheta, deltaPhi, 0);
+      if (params.mode === "Ascii") {
+        cam1._orbit(deltaTheta, deltaPhi, 0);
+      } else {
+        cam2._orbit(deltaTheta, deltaPhi, 0);
+    }
   }
 }
 function mouseWheel(event) {
   if (!isMouseOverGUI()) {
     if (event.delta > 0) {
+      if (params.mode === "Ascii") {
+        cam1._orbit(0, 0, -sensitivityZ * scaleFactor);
+      }
+      else {
       cam2._orbit(0, 0, sensitivityZ * scaleFactor);
+    }
     } else {
+      if (params.mode === "Ascii") {
+        cam1._orbit(0, 0, sensitivityZ * scaleFactor);
+      }
+      else {
       cam2._orbit(0, 0, -sensitivityZ * scaleFactor);
     }
+  }
   }
 }
 
 function drawDither() {
-  // zoom = lerp(zoom, targetZoom, 0.1); //these three also fake orbit controls, buggy
-  // currentRot.x = lerp(currentRot.x, targetRot.x, 0.1);
-  // currentRot.y = lerp(currentRot.y, targetRot.y, 0.1);
-  // angleMode(DEGREES);
   background(0);
   // Render scene
   pg2.background(255);
   pg2.push();
-  // pg.orbitControl();
-  // pg.translate(0, 0, -zoom); //these three are fake orbit controls, buggy
-  // pg.rotateX(currentRot.x);
-  // pg.rotateY(currentRot.y);
-  // ---
+
   pg2.rotateY(rotationY);
-  console.log("rotationy in dither", rotationY);
+
   pg2.scale(-3);
   pg2.normalMaterial();
   pg2.model(obj);
