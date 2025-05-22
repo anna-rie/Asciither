@@ -304,7 +304,7 @@ function setupGui() {
     //shared folder
     sharedFolder = gui.addFolder("Settings");
     sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
-    sharedFolder.add(params, "mode", ["Ascii", "Dither"]).name("Render Mode").onChange(toggleMode);
+    sharedFolder.add(params, "mode", ["Ascii", "Dither", "ShaderDither"]).name("Render Mode").onChange(toggleMode);
     sharedFolder.addColor(params, "bgColor").name("BG Color");
     sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
     sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
