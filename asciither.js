@@ -15,6 +15,7 @@
       }
 /* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/    
 /* what next:
+add gradient to ascii graphics layer! :)
 add material (jpg!!) as texture, move ascii to graphicslayer, fake orbit control for both modes... (fake orbit control link ted) 
 light colors?, color gradient to object, experimentation, export options, import videos too, layers, background images / objects */
 /* CODE */
