@@ -54,6 +54,7 @@ let sketchFramebuffer;
 // ---
 let pg1;
 let pg2;
+let pg3;
 let rotationY = 0;
 // --- st-o orbit control
 const sensitivityX = 1;
@@ -62,6 +63,9 @@ const sensitivityZ = 0.001;
 const scaleFactor = 50;
 let cam1;
 let cam2;
+let cam3;
+let shaderDither;
+let bayerImage;
 // ---
 let bayerMatrix = [
   [0, 8, 2, 10],
@@ -74,6 +78,8 @@ let thresholdMap = [];
 // ---
 function preload() {
     obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
+    shaderDither = loadShader("shaders/dither.vert", "shaders/dither.frag");
+    bayerImage = loadImage("textures/bayer.png");
   }
 
 function setup() {
@@ -81,8 +87,10 @@ function setup() {
     pixelDensity(1);
     if (params.mode === "Ascii") {
         setupAscii();
-      } else {
+      } else if (params.mode === "Dither") {
         setupDither();
+      } else if (params.mode === "ShaderDither") {
+        setupShaderDither();
       }
     setupShared(); //setup gui in there
 }
@@ -101,9 +109,11 @@ function draw() {
     );
     if (params.mode === "Ascii") {
         drawAscii();
-      } else {
+      } else if (params.mode === "Dither") {
         drawDither();
-      }
+      } else if (params.mode === "ShaderDither") {
+        drawShaderDither();
+      } 
     }
 
 
@@ -140,7 +150,7 @@ function drawAscii() {
     pg1.rotateY(rotationY);
     pg1.noStroke();
 
-    c = color(params.fontColor);
+    let c = color(params.fontColor);
     c.setAlpha(params.fontAlpha * 255); //convert to 0-255
     pg1.fill(c);
 
@@ -179,7 +189,7 @@ function setupAsciify() {
 function setupDither(){
     // <- clear previous canvas here?
     //createCanvas(windowWidth, windowHeight);
-    pixelDensity(1);
+    // pixelDensity(1);
 
     pg2 = createGraphics(width, height, WEBGL);
     pg2.pixelDensity(1);
@@ -215,28 +225,30 @@ function mouseDragged() {
       (sensitivityY * (mouseY - pmouseY)) / scaleFactor;
       if (params.mode === "Ascii") {
         cam1._orbit(deltaTheta, deltaPhi, 0);
-      } else {
+      } else if (params.mode === "Dither") {
         cam2._orbit(deltaTheta, deltaPhi, 0);
+    } else if (params.mode === "ShaderDither") {
+        cam3._orbit(deltaTheta, deltaPhi, 0);
     }
   }
 }
 function mouseWheel(event) {
   if (!isMouseOverGUI()) {
-    if (event.delta > 0) {
-      if (params.mode === "Ascii") {
-        cam1._orbit(0, 0, -sensitivityZ * scaleFactor);
-      }
-      else {
-      cam2._orbit(0, 0, sensitivityZ * scaleFactor);
+    // Calculate zoom direction: scroll up (delta > 0) zooms in (-), down zooms out (+)
+    let direction = event.delta > 0 ? 1 : -1;
+    let offset = direction * sensitivityZ * scaleFactor;
+
+    switch (params.mode) {
+      case "Ascii":
+        cam1._orbit(0, 0, offset);
+        break;
+      case "Dither":
+        cam2._orbit(0, 0, offset);
+        break;
+      case "ShaderDither":
+        cam3._orbit(0, 0, offset);
+        break;
     }
-    } else {
-      if (params.mode === "Ascii") {
-        cam1._orbit(0, 0, sensitivityZ * scaleFactor);
-      }
-      else {
-      cam2._orbit(0, 0, -sensitivityZ * scaleFactor);
-    }
-  }
   }
 }
 
@@ -290,6 +302,38 @@ function drawDither() {
   }
 }
 
+/* SHADER DITHER CODE SECTION */
+
+function setupShaderDither() {
+  pg3 = createGraphics(width, height, WEBGL);
+  pg3.pixelDensity(1);
+  cam3 = pg3.createCamera(); // st-o orbit control
+}
+
+function drawShaderDither() {
+  // Render 3D scene into pg3
+  // cam3.lookAt(0, 0, 0);
+  // cam3.setPosition(cam3.eyeX, cam3.eyeY, cam3.eyeZ);
+  pg3.push();
+  pg3.background(255);
+  pg3.camera(cam3.eyeX, cam3.eyeY, cam3.eyeZ, 0, 0, 0, 0, 1, 0); //lock to cam3 (?)
+  pg3.scale(-3);
+  pg3.rotateY(rotationY);
+  pg3.normalMaterial();
+  pg3.model(obj);
+  pg3.pop();
+
+  // draw pg3 to screen with dither shader
+  shader(shaderDither);
+  shaderDither.setUniform("bgl_RenderedTexture", pg3); //pg3.canvas or just pg3?
+  shaderDither.setUniform("bayerTexture", bayerImage);
+  shaderDither.setUniform("u_resolution", [width, height]);
+  shaderDither.setUniform("u_time", millis() / 1000.0);
+
+  //fullscreen quad to apply the shader
+  rect(-width / 2, -height / 2, width, height);
+  // image(pg3, -width / 2, -height / 2);
+}
 
 /* ASCII + DITHER FUNCTIONS */
 
@@ -354,9 +398,14 @@ function updateGui() {
     toggleFolder(asciiFolder, false);
     toggleFolder(ditherFolder, true);
     ditherFolder.open();
+  } else if (params.mode === "ShaderDither") {
+    toggleFolder(asciiFolder, false); 
+    toggleFolder(ditherFolder, false);
+    console.log("shader dither mode");
   } else {
-    console.error("Invalid mode");
-  }
+    console.log("none of the modes");
+  console.error("Invalid mode");
+}
 }
 
 function readFile(theFile){
@@ -386,7 +435,11 @@ function toggleMode(init = false) {
   } else if (params.mode === "Dither") {
     p5asciify.renderers().get("brightness").disable();
       setupDither();
-  } else {
+  } else if (params.mode === "ShaderDither") {
+    p5asciify.renderers().get("brightness").disable();
+    setupShaderDither();
+  }
+   else {
     console.error("Invalid mode");
   }
   updateGui();
@@ -413,12 +466,14 @@ function isMouseOverGUI() {
 }
 //add keypressed for a and A
 function keyPressed() {
-  if (key === "a" || key === "A") {
-    debugDisableAscii = !debugDisableAscii;
-    if (debugDisableAscii) {
-      p5asciify.renderers().get("brightness").disable();
-    } else {
-      p5asciify.renderers().get("brightness").enable();
+  if (!isMouseOverGUI()) {
+    if (key === "a" || key === "A") {
+      debugDisableAscii = !debugDisableAscii;
+      if (debugDisableAscii) {
+        p5asciify.renderers().get("brightness").disable();
+      } else {
+        p5asciify.renderers().get("brightness").enable();
+      }
     }
   }
 }
