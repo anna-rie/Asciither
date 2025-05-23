@@ -15,6 +15,7 @@
       }
 /* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/    
 /* what next:
+transparency
 add gradient to ascii graphics layer! :)
 add material (jpg!!) as texture, move ascii to graphicslayer, fake orbit control for both modes... (fake orbit control link ted) 
 light colors?, color gradient to object, experimentation, export options, import videos too, layers, background images / objects */
@@ -25,10 +26,14 @@ light colors?, color gradient to object, experimentation, export options, import
 let obj;
 let gui;
 let guiDom;
-let asciiFolder, ditherFolder, sharedFolder;
+let asciiFolder, ditherFolder, sharedFolder, shaderDitherFolder;
 let params = {
   mode: "Ascii",
   bgColor: "#000000",
+  transparency: false,
+  mainColor: "#ff0000",
+  color1: "#00ff00",
+  color2: "#0000ff",
   lightX: 100, // <--------------------- light doesn't work yet
   lightY: 100,
   lightZ: -200,
@@ -39,9 +44,10 @@ let params = {
   fontAlpha: 0.25,
   invertAscii: false,
   normalMaterial: false,
-  charactersInput: "0123456789",
+  charactersInput: "□│▒▓▀▄█", //0123456789 ; █▙▟▛▜▝▘▗▖▞▚▄▀▐●□■_ ; │▒▓▀▄█
   blockSize: 15,
   ditherColor: "#000000",
+  ditherSize: 1.0,
 };
 let actions = {
   uploadObj: () => {
@@ -64,8 +70,10 @@ const scaleFactor = 50;
 let cam1;
 let cam2;
 let cam3;
+let dither_fs;
 let shaderDither;
 let bayerImage;
+// let asciified;
 // ---
 let bayerMatrix = [
   [0, 8, 2, 10],
@@ -78,8 +86,8 @@ let thresholdMap = [];
 // ---
 function preload() {
     obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
-    shaderDither = loadShader("shaders/dither.vert", "shaders/dither.frag");
-    bayerImage = loadImage("textures/bayer.png");
+    // shaderDither = loadShader("shaders/dither.vert", "shaders/dither.frag");
+    // bayerImage = loadImage("textures/bayer.png");
   }
 
 function setup() {
@@ -98,7 +106,11 @@ function setup() {
 
 function draw() {
     rotationY -= 0.0009 * deltaTime;
-    ambientLight(100);
+    // ambientLight(100);
+    // lights();
+    clear();
+    background(params.bgColor);
+
     directionalLight(
       red(params.lightColor) * params.lightIntensity,
       green(params.lightColor) * params.lightIntensity,
@@ -114,6 +126,7 @@ function draw() {
       } else if (params.mode === "ShaderDither") {
         drawShaderDither();
       } 
+
     }
 
 
@@ -130,18 +143,31 @@ function setupAscii(){
 
   pg1.background(0);
   fill(255, 0, 0, 50);
-  let c = color(params.fontColor);
+  let c = color(params.mainColor);
   c.setAlpha(params.fontAlpha * 255); //convert to 0-255
   pg1.fill(c);
 }
 
 function drawAscii() {
     p5asciify.fontSize(params.fontSize);
-    sketchFramebuffer.begin();
-
+    p5asciify.renderers().get("brightness").update({
+      characters: params.charactersInput,
+    });
+    p5asciify.background([0, 0, 0, 0]);
+    sketchFramebuffer.begin(); //turn this back on if possible
+    clear();
     pg1.push();
     pg1.clear();
-    pg1.background(params.bgColor);
+    // pg1.background(params.bgColor);
+    pg1.lights();
+    pg1.directionalLight(
+      red(params.lightColor) * params.lightIntensity,
+      green(params.lightColor) * params.lightIntensity,
+      blue(params.lightColor) * params.lightIntensity,
+      params.lightX,
+      params.lightY,
+      params.lightZ
+    );
 
     // if (!isMouseOverGUI()) {
     //   orbitControl(4, 4, 0.3);
@@ -150,7 +176,7 @@ function drawAscii() {
     pg1.rotateY(rotationY);
     pg1.noStroke();
 
-    let c = color(params.fontColor);
+    let c = color(params.mainColor);
     c.setAlpha(params.fontAlpha * 255); //convert to 0-255
     pg1.fill(c);
 
@@ -170,8 +196,8 @@ function drawAscii() {
 
     image(pg1, -width / 2, -height / 2);
     sketchFramebuffer.end();
-
-    image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2);
+    // let asciified = p5asciify(pg1);
+    image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2); //or asciified instead of sketchFramebuffer
 }
 
 function setupAsciify() {
@@ -256,12 +282,15 @@ function drawDither() {
   background(0);
   // Render scene
   pg2.background(255);
+  // pg2.clear(); //this for transparency ?
   pg2.push();
 
   pg2.rotateY(rotationY);
 
   pg2.scale(-3);
-  pg2.normalMaterial();
+  if(params.normalMaterial){
+    pg2.normalMaterial();
+  }
   pg2.model(obj);
   pg2.pop();
   pg2.loadPixels();
@@ -288,7 +317,7 @@ function drawDither() {
       let mx = (x / params.blockSize) % matrixSize;
       let my = (y / params.blockSize) % matrixSize;
       let threshold = thresholdMap[my][mx] * 255;
-      let colorVal = avg < threshold ? params.ditherColor : 255;
+      let colorVal = avg < threshold ? params.mainColor : 255;
 
       // Block einfärben
       push();
@@ -308,31 +337,37 @@ function setupShaderDither() {
   pg3 = createGraphics(width, height, WEBGL);
   pg3.pixelDensity(1);
   cam3 = pg3.createCamera(); // st-o orbit control
+  dither_fs = createFilterShader(dither_src);
 }
 
 function drawShaderDither() {
-  // Render 3D scene into pg3
-  // cam3.lookAt(0, 0, 0);
-  // cam3.setPosition(cam3.eyeX, cam3.eyeY, cam3.eyeZ);
+  // render 3d scene into pg3
   pg3.push();
-  pg3.background(255);
+  //add ambient light
+  // pg3.ambientLight(100);
+  pg3.background(params.bgColor);
   pg3.camera(cam3.eyeX, cam3.eyeY, cam3.eyeZ, 0, 0, 0, 0, 1, 0); //lock to cam3 (?)
   pg3.scale(-3);
   pg3.rotateY(rotationY);
-  pg3.normalMaterial();
+  pg3.fill(params.mainColor);
+  if(params.normalMaterial){
+    pg3.normalMaterial();
+  }
+  pg3.noStroke();
   pg3.model(obj);
   pg3.pop();
 
-  // draw pg3 to screen with dither shader
-  shader(shaderDither);
-  shaderDither.setUniform("bgl_RenderedTexture", pg3); //pg3.canvas or just pg3?
-  shaderDither.setUniform("bayerTexture", bayerImage);
-  shaderDither.setUniform("u_resolution", [width, height]);
-  shaderDither.setUniform("u_time", millis() / 1000.0);
+  // set uniforms
+  let indexMatrix4x4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  dither_fs.setUniform("indexMatrix4x4", indexMatrix4x4);
+  dither_fs.setUniform("tex0", pg3); //send pg3 texture into shader
+  dither_fs.setUniform("ditherSize", params.ditherSize);
+  dither_fs.setUniform("ditherColor", [red(params.ditherColor) / 255, green(params.ditherColor) / 255, blue(params.ditherColor) / 255]);
 
-  //fullscreen quad to apply the shader
-  rect(-width / 2, -height / 2, width, height);
-  // image(pg3, -width / 2, -height / 2);
+  
+  image(pg3, -width / 2, -height / 2);
+
+  filter(dither_fs);
 }
 
 /* ASCII + DITHER FUNCTIONS */
@@ -350,6 +385,12 @@ function setupGui() {
     sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
     sharedFolder.add(params, "mode", ["Ascii", "Dither", "ShaderDither"]).name("Render Mode").onChange(toggleMode);
     sharedFolder.addColor(params, "bgColor").name("BG Color");
+    sharedFolder.add(params, "transparency").name("Transparency");
+    sharedFolder.addColor(params, "mainColor").name("Main Color");
+    sharedFolder.addColor(params, "color1").name("Color 1");
+    sharedFolder.addColor(params, "color2").name("Color 2");
+    sharedFolder.add(params, "normalMaterial").name("Normal Material");
+
     sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
     sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
     sharedFolder.add(params, "lightZ", -500, 500).step(1).name("Light Z");
@@ -363,17 +404,19 @@ function setupGui() {
         p5asciify.fontSize(val);
       }
     });
-    asciiFolder.addColor(params, "fontColor").name("Font Color");
+    //asciiFolder.addColor(params, "fontColor").name("Font Color");
     asciiFolder.add(params, "fontAlpha", 0, 1).step(0.01).name("Opacity");
     asciiFolder.add(params, "invertAscii").name("Invert");
-    asciiFolder.add(params, "normalMaterial").name("Normal Material");
     asciiFolder.add(params, "charactersInput").name("Ascii Characters").onChange(handleAsciiCharsInput); //function in here
 
     //dither folder
     ditherFolder = gui.addFolder("Dither");
-    ditherFolder.add(params, "blockSize", 8, 25, 1).name("Pixel Size");
-    ditherFolder.addColor(params, "ditherColor").name("Dither Color");
-    
+    ditherFolder.add(params, "blockSize", 8, 25, 1).name("Pixel Size");    
+
+    //shader dither folder
+    shaderDitherFolder = gui.addFolder("Shader Dither");
+    shaderDitherFolder.addColor(params, "ditherColor").name("Dither Color");
+    shaderDitherFolder.add(params, "ditherSize", 0.1, 2.0, 0.1).name("Dither Size");
     updateGui();
 }
 
@@ -391,16 +434,21 @@ function updateGui() {
   //decide which folders to show and hide
   sharedFolder.open();
   if (params.mode === "Ascii") {
+    toggleFolder(ditherFolder, false);
+    toggleFolder(shaderDitherFolder, false);
     toggleFolder(asciiFolder, true);
     asciiFolder.open();
     toggleFolder(ditherFolder, false);
   } else if (params.mode === "Dither") {
     toggleFolder(asciiFolder, false);
+    toggleFolder(shaderDitherFolder, false);
     toggleFolder(ditherFolder, true);
     ditherFolder.open();
   } else if (params.mode === "ShaderDither") {
     toggleFolder(asciiFolder, false); 
     toggleFolder(ditherFolder, false);
+    toggleFolder(shaderDitherFolder, true);
+    shaderDitherFolder.open();
     console.log("shader dither mode");
   } else {
     console.log("none of the modes");
@@ -477,5 +525,191 @@ function keyPressed() {
     }
   }
 }
+
+// dither - https://medium.com/the-bkpt/dithered-shading-tutorial-29f57d06ac39
+// http://alex-charlton.com/posts/Dithering_on_the_GPU/
+// https://github.com/hughsk/glsl-dither/blob/master/example/index.frag
+let dither_src = `precision mediump float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+uniform float _noise;
+uniform float indexMatrix4x4[16];
+uniform float ditherSize;
+uniform vec3 ditherColor; //color to use instead of black
+ 
+mat4 bayer = mat4(
+  -0.5, 0.0, -0.375, 0.125,
+  0.25, -0.25, 0.375, -0.125,
+  -0.3125, 0.1875, -0.4375, 0.0625,
+  0.4375, -0.0625, 0.3125, -0.1875
+); 
+ 
+// https://github.com/hughsk/glsl-luma/blob/master/index.glsl
+float luma(vec3 color) {
+  return dot(color, vec3(0.299, 0.587, 0.114));
+}
+// https://github.com/hughsk/glsl-luma/blob/master/index.glsl
+float luma(vec4 color) {
+  return dot(color.rgb, vec3(0.299, 0.587, 0.114));
+}
+ 
+float dither4x4(vec2 position, float brightness) {
+  int x = int(mod(position.x, 4.0));
+  int y = int(mod(position.y, 4.0));
+  int index = x + y * 4;
+  float limit = 0.0;
+ 
+  if (x < 8) {
+    if (index == 0) limit = 0.0625;
+    if (index == 1) limit = 0.5625;
+    if (index == 2) limit = 0.1875;
+    if (index == 3) limit = 0.6875;
+    if (index == 4) limit = 0.8125;
+    if (index == 5) limit = 0.3125;
+    if (index == 6) limit = 0.9375;
+    if (index == 7) limit = 0.4375;
+    if (index == 8) limit = 0.25;
+    if (index == 9) limit = 0.75;
+    if (index == 10) limit = 0.125;
+    if (index == 11) limit = 0.625;
+    if (index == 12) limit = 1.0;
+    if (index == 13) limit = 0.5;
+    if (index == 14) limit = 0.875;
+    if (index == 15) limit = 0.375;
+  }
+ 
+  return brightness < limit ? 0.0 : 1.0;
+}
+ 
+vec3 dither4x4(vec2 position, vec3 color) {
+  return color * dither4x4(position, luma(color));
+}
+ 
+vec4 dither4x4(vec2 position, vec4 color) {
+  return vec4(color.rgb * dither4x4(position, luma(color)), 1.0);
+}
+ 
+float dither8x8(vec2 position, float brightness) {
+  int x = int(mod(position.x, 8.0));
+  int y = int(mod(position.y, 8.0));
+  int index = x + y * 8;
+  float limit = 0.0;
+ 
+  if (x < 8) {
+    if (index == 0) limit = 0.015625;
+    if (index == 1) limit = 0.515625;
+    if (index == 2) limit = 0.140625;
+    if (index == 3) limit = 0.640625;
+    if (index == 4) limit = 0.046875;
+    if (index == 5) limit = 0.546875;
+    if (index == 6) limit = 0.171875;
+    if (index == 7) limit = 0.671875;
+    if (index == 8) limit = 0.765625;
+    if (index == 9) limit = 0.265625;
+    if (index == 10) limit = 0.890625;
+    if (index == 11) limit = 0.390625;
+    if (index == 12) limit = 0.796875;
+    if (index == 13) limit = 0.296875;
+    if (index == 14) limit = 0.921875;
+    if (index == 15) limit = 0.421875;
+    if (index == 16) limit = 0.203125;
+    if (index == 17) limit = 0.703125;
+    if (index == 18) limit = 0.078125;
+    if (index == 19) limit = 0.578125;
+    if (index == 20) limit = 0.234375;
+    if (index == 21) limit = 0.734375;
+    if (index == 22) limit = 0.109375;
+    if (index == 23) limit = 0.609375;
+    if (index == 24) limit = 0.953125;
+    if (index == 25) limit = 0.453125;
+    if (index == 26) limit = 0.828125;
+    if (index == 27) limit = 0.328125;
+    if (index == 28) limit = 0.984375;
+    if (index == 29) limit = 0.484375;
+    if (index == 30) limit = 0.859375;
+    if (index == 31) limit = 0.359375;
+    if (index == 32) limit = 0.0625;
+    if (index == 33) limit = 0.5625;
+    if (index == 34) limit = 0.1875;
+    if (index == 35) limit = 0.6875;
+    if (index == 36) limit = 0.03125;
+    if (index == 37) limit = 0.53125;
+    if (index == 38) limit = 0.15625;
+    if (index == 39) limit = 0.65625;
+    if (index == 40) limit = 0.8125;
+    if (index == 41) limit = 0.3125;
+    if (index == 42) limit = 0.9375;
+    if (index == 43) limit = 0.4375;
+    if (index == 44) limit = 0.78125;
+    if (index == 45) limit = 0.28125;
+    if (index == 46) limit = 0.90625;
+    if (index == 47) limit = 0.40625;
+    if (index == 48) limit = 0.25;
+    if (index == 49) limit = 0.75;
+    if (index == 50) limit = 0.125;
+    if (index == 51) limit = 0.625;
+    if (index == 52) limit = 0.21875;
+    if (index == 53) limit = 0.71875;
+    if (index == 54) limit = 0.09375;
+    if (index == 55) limit = 0.59375;
+    if (index == 56) limit = 1.0;
+    if (index == 57) limit = 0.5;
+    if (index == 58) limit = 0.875;
+    if (index == 59) limit = 0.375;
+    if (index == 60) limit = 0.96875;
+    if (index == 61) limit = 0.46875;
+    if (index == 62) limit = 0.84375;
+    if (index == 63) limit = 0.34375;
+  }
+ 
+  return brightness < limit ? 0.0 : 1.0;
+}
+ 
+vec3 dither8x8(vec2 position, vec3 color) {
+  float factor = dither8x8(position, luma(color)); //return color * dither8x8(position, luma(color));
+  return mix(ditherColor, color, factor); //0.0 = ditherColor, 1.0 = original color
+}
+ 
+vec4 dither8x8(vec2 position, vec4 color) {
+  return vec4(color.rgb * dither8x8(position, luma(color)), 1.0);
+}
+ 
+float dither2x2(vec2 position, float brightness) {
+  int x = int(mod(position.x, 2.0));
+  int y = int(mod(position.y, 2.0));
+  int index = x + y * 2;
+  float limit = 0.0;
+ 
+  if (x < 8) {
+    if (index == 0) limit = 0.25;
+    if (index == 1) limit = 0.75;
+    if (index == 2) limit = 1.00;
+    if (index == 3) limit = 0.50;
+  }
+ 
+  return brightness < limit ? 0.0 : 1.0;
+}
+ 
+vec3 dither2x2(vec2 position, vec3 color) {
+  return color * dither2x2(position, luma(color));
+}
+ 
+vec4 dither2x2(vec2 position, vec4 color) {
+  return vec4(color.rgb * dither2x2(position, luma(color)), 1.0);
+}
+ 
+ 
+void main() {
+  vec2 uv = vTexCoord;
+
+  float scale = 0.5;
+  vec2 scaledCoord = gl_FragCoord.xy * ditherSize;
+
+  vec3 texColor = texture2D(tex0, uv).rgb;
+  vec3 finalColor = dither8x8(scaledCoord, texColor);
+
+  gl_FragColor = vec4(finalColor, 1.0);
+}
+  `;
 
 /* ----------- unsorted code below */
