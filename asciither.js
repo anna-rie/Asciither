@@ -1,3 +1,5 @@
+// <script src="https://cdn.jsdelivr.net/npm/p5.asciify@0.9.6/dist/p5.asciify.umd.min.js"></script>
+
 /* CUSTOM FUNCTIONS FOR P5LIVE */
       // keep fullscreen if window resized
       function windowResized() {
@@ -132,33 +134,93 @@ function draw() {
 
 /* ASCII CODE SECTION */
 
+
 function setupAscii(){
-  sketchFramebuffer = createFramebuffer({
-    format: FLOAT,
-  });
+  // sketchFramebuffer = createFramebuffer({
+  //   format: FLOAT,
+  // });
 
   pg1 = createGraphics(width, height, WEBGL);
   pg1.pixelDensity(1);
   cam1 = pg1.createCamera(); // st-o orbit control
 
-  pg1.background(0);
-  fill(255, 0, 0, 50);
-  let c = color(params.mainColor);
-  c.setAlpha(params.fontAlpha * 255); //convert to 0-255
-  pg1.fill(c);
+  // customFramebuffer = createFramebuffer();
+  // pg1Asciifier = p5asciify.add(pg1); //not working <--------------------------------------------------- PROBLEM
+  // pg1Asciifier.fontSize(params.fontSize);
+  // pg1Asciifier.background([0, 0, 0, 0]); // transparent background
+
+  // pg1Asciifier.renderers().get("brightness").update({ //can i have variables in here?
+  //   enabled: true,
+  //   characters: params.charactersInput,
+  //   characterColor: params.bgColor,
+  //   fontSize: params.fontSize,
+  //   backgroundColor: "#000000",
+  //   background: [0, 0, 0, 0], // transparent background
+  //   invertMode: params.invertAscii,
+  // });
+
+  // pg1Asciifier.background([0, 0, 0, 0]); // transparent background
+
+  // pg1.background(0);
+  // fill(255, 0, 0, 50);
+  // let c = color(params.mainColor);
+  // c.setAlpha(params.fontAlpha * 255); //convert to 0-255
+  // pg1.fill(c);
+}
+
+let defaultAsciifier;
+
+let customAsciifier;
+let customFramebuffer;
+
+// let brightnessRenderer;
+
+function setupAsciify() {
+  // defaultAsciifier = p5asciify.asciifier();
+  // customAsciifier = p5asciify.asciifier();
+  customFramebuffer = createFramebuffer();
+  customAsciifier = p5asciify.add(customFramebuffer);
+
+  // defaultAsciifier.fontSize(params.fontSize);
+  customAsciifier.fontSize(params.fontSize);
+
+  customAsciifier.renderers().get("brightness").update({
+    enabled: true,
+    characters: params.charactersInput,
+    characterColor: params.mainColor,
+    backgroundColor: params.bgColor,
+    // background: [0, 0, 0, 0], // transparent background
+    invertMode: params.invertAscii,
+  });
+
+  customAsciifier.background("[0, 0, 0, 0]"); // transparent background
+
+
+  
+  
+  // p5asciify.fontSize(params.fontSize);
+
+  //console.log("setupAsciify");
+  //p5asciify.renderers().get("brightness").invert(true);
+  // p5asciify.renderers().get("brightness").update({
+  //   characters: "%&asdf0123456789",
+  // });
 }
 
 function drawAscii() {
-    p5asciify.fontSize(params.fontSize);
-    p5asciify.renderers().get("brightness").update({
-      characters: params.charactersInput,
-    });
-    p5asciify.background([0, 0, 0, 0]);
-    sketchFramebuffer.begin(); //turn this back on if possible
-    clear();
-    pg1.push();
+clear();
+  // background(params.bgColor);
+
+    // p5asciify.fontSize(params.fontSize);
+    // p5asciify.renderers().get("brightness").update({
+    //   characters: params.charactersInput,
+    // });
+    // p5asciify.background([0, 0, 0, 0]);
+    // sketchFramebuffer.begin(); //turn this back on if possible
+
+
     pg1.clear();
-    // pg1.background(params.bgColor);
+    pg1.push();
     pg1.lights();
     pg1.directionalLight(
       red(params.lightColor) * params.lightIntensity,
@@ -172,6 +234,9 @@ function drawAscii() {
     // if (!isMouseOverGUI()) {
     //   orbitControl(4, 4, 0.3);
     // }
+    customFramebuffer.begin();
+    clear();
+    // customFramebuffer.background(0, 0, 0, 0); // transparent background
     
     pg1.rotateY(rotationY);
     pg1.noStroke();
@@ -180,34 +245,61 @@ function drawAscii() {
     c.setAlpha(params.fontAlpha * 255); //convert to 0-255
     pg1.fill(c);
 
-    if (params.invertAscii) {
-      p5asciify.renderers().get("brightness").invert(true);
-    } else {
-      p5asciify.renderers().get("brightness").invert(false);
-    }
-
+    
     if(params.normalMaterial){
       pg1.normalMaterial();
+    }
+    
+    if (params.invertAscii) {
+      customAsciifier.renderers().get("brightness").invert(true);
+    } else {
+      customAsciifier.renderers().get("brightness").invert(false);
     }
 
     pg1.scale(-3);
     pg1.model(obj);
     pg1.pop();
 
-    image(pg1, -width / 2, -height / 2);
-    sketchFramebuffer.end();
+    customAsciifier.fontSize(params.fontSize);
+
+
+    customAsciifier.renderers().get("brightness").update({
+      characters: params.charactersInput,
+      characterColor: params.mainColor,
+      fontSize: params.fontSize,
+      invertMode: params.invertAscii,
+    });
+
+
+    image(pg1, -width / 2, -height / 2); // draw the pg1 graphics to the canvas
+    customFramebuffer.end();
+
+    // pg1Asciifier.renderers().get("brightness").update({
+    //   characters: params.charactersInput,
+    //   characterColor: params.mainColor,
+    //   fontSize: params.fontSize,
+    //   invertMode: params.invertAscii,
+    // });
+    // pg1Asciifier.background([0, 0, 0, 0]); // transparent background
+
+    // image(defaultAsciifier.texture, -width / 2, -height / 2);
+    // sketchFramebuffer.end();
     // let asciified = p5asciify(pg1);
-    image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2); //or asciified instead of sketchFramebuffer
+    // image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2); //or asciified instead of sketchFramebuffer
 }
 
-function setupAsciify() {
-    p5asciify.fontSize(params.fontSize);
-    //console.log("setupAsciify");
-    //p5asciify.renderers().get("brightness").invert(true);
-    // p5asciify.renderers().get("brightness").update({
-    //   characters: "%&asdf0123456789",
-    // });
+function drawAsciify() {
+  //clear();
+  if (params.mode === "Ascii") {
+
+  background(params.bgColor);
+  image(customAsciifier.texture, -width / 2, -height / 2);
   }
+  
+  // image(pg1, -width / 2, -height / 2); // draw the pg1 graphics to the canvas
+
+}
+
 
 
 /* DITHER CODE SECTION */
@@ -400,8 +492,8 @@ function setupGui() {
     //ascii folder
     asciiFolder = gui.addFolder("ASCII");
     asciiFolder.add(params, "fontSize", 5, 60, 1).name("Font Size").onChange(val => {
-      if (typeof p5asciify !== "undefined") {
-        p5asciify.fontSize(val);
+      if (typeof customAsciifier !== "undefined") {
+        customAsciifier.fontSize(val);
       }
     });
     //asciiFolder.addColor(params, "fontColor").name("Font Color");
@@ -424,10 +516,10 @@ function handleAsciiCharsInput(value) {
   if (value.length > 20) {
     params.charactersInput = value.substring(0, 20); //or slice?
   }
-  p5asciify.renderers().get("brightness").update({
+  customAsciifier.renderers().get("brightness").update({
     characters: value,
   });
-  console.log("ASCII characters: " + params.charactersInput);
+  // console.log("ASCII characters: " + params.charactersInput);
 }
 
 function updateGui() {
@@ -479,12 +571,12 @@ function toggleMode(init = false) {
   // Show/hide/setup renderers depending on mode
   if (params.mode === "Ascii") {
     setupAscii();
-    p5asciify.renderers().get("brightness").enable();
+    customAsciifier.renderers().get("brightness").enable();
   } else if (params.mode === "Dither") {
-    p5asciify.renderers().get("brightness").disable();
+    customAsciifier.renderers().get("brightness").disable();
       setupDither();
   } else if (params.mode === "ShaderDither") {
-    p5asciify.renderers().get("brightness").disable();
+    customAsciifier.renderers().get("brightness").disable();
     setupShaderDither();
   }
    else {
@@ -518,9 +610,9 @@ function keyPressed() {
     if (key === "a" || key === "A") {
       debugDisableAscii = !debugDisableAscii;
       if (debugDisableAscii) {
-        p5asciify.renderers().get("brightness").disable();
+        customAsciifier.renderers().get("brightness").disable();
       } else {
-        p5asciify.renderers().get("brightness").enable();
+        customAsciifier.renderers().get("brightness").enable();
       }
     }
   }
