@@ -1,21 +1,21 @@
 // <script src="https://cdn.jsdelivr.net/npm/p5.asciify@0.9.6/dist/p5.asciify.umd.min.js"></script>
 
 /* CUSTOM FUNCTIONS FOR P5LIVE */
-      // keep fullscreen if window resized
-      function windowResized() {
-        resizeCanvas(windowWidth, windowHeight);
-      }
+// keep fullscreen if window resized
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
 
-      // custom ease function
-      function ease(iVal, oVal, eVal) {
-        return (oVal += (iVal - oVal) * eVal);
-      }
+// custom ease function
+function ease(iVal, oVal, eVal) {
+  return (oVal += (iVal - oVal) * eVal);
+}
 
-      // processing compatibility
-      function println(msg) {
-        print(msg);
-      }
-/* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/    
+// processing compatibility
+function println(msg) {
+  print(msg);
+}
+/* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
 /* what next:
 transparency
 add gradient to ascii graphics layer! :)
@@ -30,7 +30,7 @@ let gui;
 let guiDom;
 let asciiFolder, ditherFolder, sharedFolder, shaderDitherFolder;
 let params = {
-  mode: "Ascii",
+  mode: "ShaderDither", // Ascii, Dither, ShaderDither
   bgColor: "#000000",
   transparency: false,
   mainColor: "#ff0000",
@@ -54,10 +54,10 @@ let params = {
 let actions = {
   uploadObj: () => {
     document.getElementById("file-input").click();
-  }
-}
+  },
+};
 // use local storage here maybe
-let debugDisableAscii = false; 
+let debugDisableAscii = false;
 let sketchFramebuffer;
 // ---
 let pg1;
@@ -81,61 +81,61 @@ let bayerMatrix = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
   [3, 11, 1, 9],
-  [15, 7, 13, 5]
+  [15, 7, 13, 5],
 ];
 let matrixSize = 4;
 let thresholdMap = [];
 // ---
 function preload() {
-    obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
-    // shaderDither = loadShader("shaders/dither.vert", "shaders/dither.frag");
-    // bayerImage = loadImage("textures/bayer.png");
-  }
+  obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
+  // shaderDither = loadShader("shaders/dither.vert", "shaders/dither.frag");
+  // bayerImage = loadImage("textures/bayer.png");
+}
 
 function setup() {
-    createCanvas(windowWidth, windowHeight, WEBGL);
-    pixelDensity(1);
-    if (params.mode === "Ascii") {
-        setupAscii();
-      } else if (params.mode === "Dither") {
-        setupDither();
-      } else if (params.mode === "ShaderDither") {
-        setupShaderDither();
-      }
-    setupShared(); //setup gui in there
+  createCanvas(windowWidth, windowHeight, WEBGL);
+  pixelDensity(1);
+  setupAscii();
+  // setupDither();
+  setupShaderDither();
+  // if (params.mode === "Ascii") {
+  //     setupAscii();
+  //   } else if (params.mode === "Dither") {
+  //     setupDither();
+  //   } else if (params.mode === "ShaderDither") {
+  //     setupShaderDither();
+  //   }
+  setupShared(); //setup gui in there
 }
-    
 
 function draw() {
-    rotationY -= 0.0009 * deltaTime;
-    // ambientLight(100);
-    // lights();
-    clear();
-    background(params.bgColor);
+  rotationY -= 0.0009 * deltaTime;
+  // ambientLight(100);
+  // lights();
+  clear();
+  background(params.bgColor);
 
-    directionalLight(
-      red(params.lightColor) * params.lightIntensity,
-      green(params.lightColor) * params.lightIntensity,
-      blue(params.lightColor) * params.lightIntensity,
-      params.lightX,
-      params.lightY,
-      params.lightZ
-    );
-    if (params.mode === "Ascii") {
-        drawAscii();
-      } else if (params.mode === "Dither") {
-        drawDither();
-      } else if (params.mode === "ShaderDither") {
-        drawShaderDither();
-      } 
-
-    }
-
+  directionalLight(
+    red(params.lightColor) * params.lightIntensity,
+    green(params.lightColor) * params.lightIntensity,
+    blue(params.lightColor) * params.lightIntensity,
+    params.lightX,
+    params.lightY,
+    params.lightZ
+  );
+  if (params.mode === "Ascii") {
+    drawAscii();
+  } else if (params.mode === "Dither") {
+    drawDither();
+  } else if (params.mode === "ShaderDither") {
+    drawShaderDither();
+  }
+}
 
 /* ASCII CODE SECTION */
 
-
-function setupAscii(){
+function setupAscii() {
+  console.log("setupAscii");
   // sketchFramebuffer = createFramebuffer({
   //   format: FLOAT,
   // });
@@ -173,31 +173,41 @@ let defaultAsciifier;
 let customAsciifier;
 let customFramebuffer;
 
+let isAsciiInitialized = false;
+
 // let brightnessRenderer;
 
+function removeAsciifier() {
+  if (customAsciifier) {
+    p5asciify.remove(customAsciifier);
+  }
+}
+
+// was hier drin müsste ich in anderen modi wieder resetten?? und welche teile in setupAscii? <------------- PROBLEM (Stand Mami 29.5.25)
 function setupAsciify() {
+  if (params.mode === "Ascii") {
+    console.log("setupAsciify fr fr");
+
+    customFramebuffer = createFramebuffer();
+    customAsciifier = p5asciify.add(customFramebuffer);
+
+    customAsciifier.fontSize(params.fontSize);
+
+    customAsciifier.renderers().get("brightness").update({
+      enabled: true,
+      characters: params.charactersInput,
+      characterColor: params.mainColor,
+      backgroundColor: params.bgColor,
+      invertMode: params.invertAscii,
+    });
+
+    customAsciifier.background("[0, 0, 0, 0]"); // transparent background
+
+    isAsciiInitialized = true; // set flag to true
+  }
   // defaultAsciifier = p5asciify.asciifier();
   // customAsciifier = p5asciify.asciifier();
-  customFramebuffer = createFramebuffer();
-  customAsciifier = p5asciify.add(customFramebuffer);
 
-  // defaultAsciifier.fontSize(params.fontSize);
-  customAsciifier.fontSize(params.fontSize);
-
-  customAsciifier.renderers().get("brightness").update({
-    enabled: true,
-    characters: params.charactersInput,
-    characterColor: params.mainColor,
-    backgroundColor: params.bgColor,
-    // background: [0, 0, 0, 0], // transparent background
-    invertMode: params.invertAscii,
-  });
-
-  customAsciifier.background("[0, 0, 0, 0]"); // transparent background
-
-
-  
-  
   // p5asciify.fontSize(params.fontSize);
 
   //console.log("setupAsciify");
@@ -208,118 +218,93 @@ function setupAsciify() {
 }
 
 function drawAscii() {
-clear();
-  // background(params.bgColor);
+  clear();
+  //   // background(params.bgColor);
 
-    // p5asciify.fontSize(params.fontSize);
-    // p5asciify.renderers().get("brightness").update({
-    //   characters: params.charactersInput,
-    // });
-    // p5asciify.background([0, 0, 0, 0]);
-    // sketchFramebuffer.begin(); //turn this back on if possible
+  //   // p5asciify.fontSize(params.fontSize);
+  //   // p5asciify.renderers().get("brightness").update({
+  //   //   characters: params.charactersInput,
+  //   // });
+  //   // p5asciify.background([0, 0, 0, 0]);
+  //   // sketchFramebuffer.begin(); //turn this back on if possible
 
+  pg1.clear();
+  pg1.push();
+  pg1.lights();
+  pg1.directionalLight(
+    red(params.lightColor) * params.lightIntensity,
+    green(params.lightColor) * params.lightIntensity,
+    blue(params.lightColor) * params.lightIntensity,
+    params.lightX,
+    params.lightY,
+    params.lightZ
+  );
 
-    pg1.clear();
-    pg1.push();
-    pg1.lights();
-    pg1.directionalLight(
-      red(params.lightColor) * params.lightIntensity,
-      green(params.lightColor) * params.lightIntensity,
-      blue(params.lightColor) * params.lightIntensity,
-      params.lightX,
-      params.lightY,
-      params.lightZ
-    );
+  customFramebuffer.begin();
+  clear();
 
-    // if (!isMouseOverGUI()) {
-    //   orbitControl(4, 4, 0.3);
-    // }
-    customFramebuffer.begin();
-    clear();
-    // customFramebuffer.background(0, 0, 0, 0); // transparent background
-    
-    pg1.rotateY(rotationY);
-    pg1.noStroke();
+  pg1.rotateY(rotationY);
+  pg1.noStroke();
 
-    let c = color(params.mainColor);
-    c.setAlpha(params.fontAlpha * 255); //convert to 0-255
-    pg1.fill(c);
+  let c = color(params.mainColor);
+  c.setAlpha(params.fontAlpha * 255); //convert to 0-255
+  pg1.fill(c);
 
-    
-    if(params.normalMaterial){
-      pg1.normalMaterial();
-    }
-    
-    if (params.invertAscii) {
-      customAsciifier.renderers().get("brightness").invert(true);
-    } else {
-      customAsciifier.renderers().get("brightness").invert(false);
-    }
+  if (params.normalMaterial) {
+    pg1.normalMaterial();
+  }
 
-    pg1.scale(-3);
-    pg1.model(obj);
-    pg1.pop();
+  if (params.invertAscii) {
+    customAsciifier.renderers().get("brightness").invert(true);
+  } else {
+    customAsciifier.renderers().get("brightness").invert(false);
+  }
 
-    customAsciifier.fontSize(params.fontSize);
+  pg1.scale(-3);
+  pg1.model(obj);
+  pg1.pop();
 
+  customAsciifier.fontSize(params.fontSize);
 
-    customAsciifier.renderers().get("brightness").update({
-      characters: params.charactersInput,
-      characterColor: params.mainColor,
-      fontSize: params.fontSize,
-      invertMode: params.invertAscii,
-    });
+  customAsciifier.renderers().get("brightness").update({
+    characters: params.charactersInput,
+    characterColor: params.mainColor,
+    fontSize: params.fontSize,
+    invertMode: params.invertAscii,
+  });
 
-
-    image(pg1, -width / 2, -height / 2); // draw the pg1 graphics to the canvas
-    customFramebuffer.end();
-
-    // pg1Asciifier.renderers().get("brightness").update({
-    //   characters: params.charactersInput,
-    //   characterColor: params.mainColor,
-    //   fontSize: params.fontSize,
-    //   invertMode: params.invertAscii,
-    // });
-    // pg1Asciifier.background([0, 0, 0, 0]); // transparent background
-
-    // image(defaultAsciifier.texture, -width / 2, -height / 2);
-    // sketchFramebuffer.end();
-    // let asciified = p5asciify(pg1);
-    // image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2); //or asciified instead of sketchFramebuffer
+  image(pg1, -width / 2, -height / 2); // draw the pg1 graphics to the canvas
+  customFramebuffer.end();
 }
 
 function drawAsciify() {
   //clear();
   if (params.mode === "Ascii") {
-
-  background(params.bgColor);
-  image(customAsciifier.texture, -width / 2, -height / 2);
+    background(params.bgColor);
+    image(customAsciifier.texture, -width / 2, -height / 2);
   }
-  
+
   // image(pg1, -width / 2, -height / 2); // draw the pg1 graphics to the canvas
-
 }
-
-
 
 /* DITHER CODE SECTION */
 
-function setupDither(){
-    // <- clear previous canvas here?
-    //createCanvas(windowWidth, windowHeight);
-    // pixelDensity(1);
+function setupDither() {
+  // <- clear previous canvas here?
+  //createCanvas(windowWidth, windowHeight);
+  // pixelDensity(1);
 
-    pg2 = createGraphics(width, height, WEBGL);
-    pg2.pixelDensity(1);
-    cam2 = pg2.createCamera(); // st-o orbit control
+  pg2 = createGraphics(width, height, WEBGL);
+  pg2.pixelDensity(1);
+  cam2 = pg2.createCamera(); // st-o orbit control
 
-
-    for (let y = 0; y < matrixSize; y++) {
-        thresholdMap[y] = [];
-        for (let x = 0; x < matrixSize; x++) {
-        thresholdMap[y][x] = (bayerMatrix[y][x] + 0.5) / (matrixSize * matrixSize);
-        }
+  for (let y = 0; y < matrixSize; y++) {
+    thresholdMap[y] = [];
+    for (let x = 0; x < matrixSize; x++) {
+      thresholdMap[y][x] =
+        (bayerMatrix[y][x] + 0.5) / (matrixSize * matrixSize);
     }
+  }
 }
 
 // // fake orbit control functions
@@ -337,16 +322,14 @@ function setupDither(){
 // st-o orbit control functions
 function mouseDragged() {
   if (!isMouseOverGUI()) {
-    const deltaTheta =
-      (-sensitivityX * (mouseX - pmouseX)) / scaleFactor;
-    const deltaPhi =
-      (sensitivityY * (mouseY - pmouseY)) / scaleFactor;
-      if (params.mode === "Ascii") {
-        cam1._orbit(deltaTheta, deltaPhi, 0);
-      } else if (params.mode === "Dither") {
-        cam2._orbit(deltaTheta, deltaPhi, 0);
+    const deltaTheta = (-sensitivityX * (mouseX - pmouseX)) / scaleFactor;
+    const deltaPhi = (sensitivityY * (mouseY - pmouseY)) / scaleFactor;
+    if (params.mode === "Ascii") {
+      cam1._orbit(deltaTheta, deltaPhi, 0);
+    } else if (params.mode === "Dither") {
+      cam2._orbit(deltaTheta, deltaPhi, 0);
     } else if (params.mode === "ShaderDither") {
-        cam3._orbit(deltaTheta, deltaPhi, 0);
+      cam3._orbit(deltaTheta, deltaPhi, 0);
     }
   }
 }
@@ -380,7 +363,7 @@ function drawDither() {
   pg2.rotateY(rotationY);
 
   pg2.scale(-3);
-  if(params.normalMaterial){
+  if (params.normalMaterial) {
     pg2.normalMaterial();
   }
   pg2.model(obj);
@@ -403,7 +386,7 @@ function drawDither() {
           }
         }
       }
-      avg /= (params.blockSize * params.blockSize);
+      avg /= params.blockSize * params.blockSize;
 
       // Bayer-Schwelle vergleichen
       let mx = (x / params.blockSize) % matrixSize;
@@ -426,6 +409,7 @@ function drawDither() {
 /* SHADER DITHER CODE SECTION */
 
 function setupShaderDither() {
+  console.log("setupShaderDither");
   pg3 = createGraphics(width, height, WEBGL);
   pg3.pixelDensity(1);
   cam3 = pg3.createCamera(); // st-o orbit control
@@ -442,7 +426,7 @@ function drawShaderDither() {
   pg3.scale(-3);
   pg3.rotateY(rotationY);
   pg3.fill(params.mainColor);
-  if(params.normalMaterial){
+  if (params.normalMaterial) {
     pg3.normalMaterial();
   }
   pg3.noStroke();
@@ -454,9 +438,12 @@ function drawShaderDither() {
   dither_fs.setUniform("indexMatrix4x4", indexMatrix4x4);
   dither_fs.setUniform("tex0", pg3); //send pg3 texture into shader
   dither_fs.setUniform("ditherSize", params.ditherSize);
-  dither_fs.setUniform("ditherColor", [red(params.ditherColor) / 255, green(params.ditherColor) / 255, blue(params.ditherColor) / 255]);
+  dither_fs.setUniform("ditherColor", [
+    red(params.ditherColor) / 255,
+    green(params.ditherColor) / 255,
+    blue(params.ditherColor) / 255,
+  ]);
 
-  
   image(pg3, -width / 2, -height / 2);
 
   filter(dither_fs);
@@ -464,55 +451,70 @@ function drawShaderDither() {
 
 /* ASCII + DITHER FUNCTIONS */
 
-function setupShared() {    
+function setupShared() {
   setupGui();
 }
 
 function setupGui() {
-    gui = new dat.GUI({width: 300});
-    guiDom = document.querySelector(".dg.main.a");
+  gui = new dat.GUI({ width: 300 });
+  guiDom = document.querySelector(".dg.main.a");
 
-    //shared folder
-    sharedFolder = gui.addFolder("Settings");
-    sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
-    sharedFolder.add(params, "mode", ["Ascii", "Dither", "ShaderDither"]).name("Render Mode").onChange(toggleMode);
-    sharedFolder.addColor(params, "bgColor").name("BG Color");
-    sharedFolder.add(params, "transparency").name("Transparency");
-    sharedFolder.addColor(params, "mainColor").name("Main Color");
-    sharedFolder.addColor(params, "color1").name("Color 1");
-    sharedFolder.addColor(params, "color2").name("Color 2");
-    sharedFolder.add(params, "normalMaterial").name("Normal Material");
+  //shared folder
+  sharedFolder = gui.addFolder("Settings");
+  sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
+  sharedFolder
+    .add(params, "mode", ["Ascii", "ShaderDither"]) // removed "Dither" :) RIP
+    .name("Render Mode")
+    .onChange(toggleMode);
+  sharedFolder.addColor(params, "bgColor").name("BG Color");
+  sharedFolder.add(params, "transparency").name("Transparency");
+  sharedFolder.addColor(params, "mainColor").name("Main Color");
+  sharedFolder.addColor(params, "color1").name("Color 1");
+  sharedFolder.addColor(params, "color2").name("Color 2");
+  sharedFolder.add(params, "normalMaterial").name("Normal Material");
 
-    sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
-    sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
-    sharedFolder.add(params, "lightZ", -500, 500).step(1).name("Light Z");
-    sharedFolder.addColor(params, "lightColor").name("Light Color");
-    sharedFolder.add(params, "lightIntensity", 0, 100).step(0.01).name("Light Intensity");
+  sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
+  sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
+  sharedFolder.add(params, "lightZ", -500, 500).step(1).name("Light Z");
+  sharedFolder.addColor(params, "lightColor").name("Light Color");
+  sharedFolder
+    .add(params, "lightIntensity", 0, 100)
+    .step(0.01)
+    .name("Light Intensity");
 
-    //ascii folder
-    asciiFolder = gui.addFolder("ASCII");
-    asciiFolder.add(params, "fontSize", 5, 60, 1).name("Font Size").onChange(val => {
+  //ascii folder
+  asciiFolder = gui.addFolder("ASCII");
+  asciiFolder
+    .add(params, "fontSize", 5, 60, 1)
+    .name("Font Size")
+    .onChange((val) => {
       if (typeof customAsciifier !== "undefined") {
         customAsciifier.fontSize(val);
       }
     });
-    //asciiFolder.addColor(params, "fontColor").name("Font Color");
-    asciiFolder.add(params, "fontAlpha", 0, 1).step(0.01).name("Opacity");
-    asciiFolder.add(params, "invertAscii").name("Invert");
-    asciiFolder.add(params, "charactersInput").name("Ascii Characters").onChange(handleAsciiCharsInput); //function in here
+  //asciiFolder.addColor(params, "fontColor").name("Font Color");
+  asciiFolder.add(params, "fontAlpha", 0, 1).step(0.01).name("Opacity");
+  asciiFolder.add(params, "invertAscii").name("Invert");
+  asciiFolder
+    .add(params, "charactersInput")
+    .name("Ascii Characters")
+    .onChange(handleAsciiCharsInput); //function in here
 
-    //dither folder
-    ditherFolder = gui.addFolder("Dither");
-    ditherFolder.add(params, "blockSize", 8, 25, 1).name("Pixel Size");    
+  //dither folder
+  ditherFolder = gui.addFolder("Dither");
+  ditherFolder.add(params, "blockSize", 8, 25, 1).name("Pixel Size");
 
-    //shader dither folder
-    shaderDitherFolder = gui.addFolder("Shader Dither");
-    shaderDitherFolder.addColor(params, "ditherColor").name("Dither Color");
-    shaderDitherFolder.add(params, "ditherSize", 0.1, 2.0, 0.1).name("Dither Size");
-    updateGui();
+  //shader dither folder
+  shaderDitherFolder = gui.addFolder("Shader Dither");
+  shaderDitherFolder.addColor(params, "ditherColor").name("Dither Color");
+  shaderDitherFolder
+    .add(params, "ditherSize", 0.1, 2.0, 0.1)
+    .name("Dither Size");
+  updateGui();
 }
 
 function handleAsciiCharsInput(value) {
+  console.log("handle ascii chars");
   if (value.length > 20) {
     params.charactersInput = value.substring(0, 20); //or slice?
   }
@@ -537,49 +539,56 @@ function updateGui() {
     toggleFolder(ditherFolder, true);
     ditherFolder.open();
   } else if (params.mode === "ShaderDither") {
-    toggleFolder(asciiFolder, false); 
+    toggleFolder(asciiFolder, false);
     toggleFolder(ditherFolder, false);
     toggleFolder(shaderDitherFolder, true);
     shaderDitherFolder.open();
-    console.log("shader dither mode");
   } else {
     console.log("none of the modes");
-  console.error("Invalid mode");
-}
-}
-
-function readFile(theFile){
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        var data = e.target.result
- 
-        // sets p5 shape here
-        obj = createModel(data, '.obj', true)
-    };
-    // load into reader above
-    reader.readAsText(theFile);   
+    console.error("Invalid mode");
+  }
 }
 
-document.getElementById("file-input").addEventListener("change", function(event) {
+function readFile(theFile) {
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var data = e.target.result;
+
+    // sets p5 shape here
+    obj = createModel(data, ".obj", true);
+  };
+  // load into reader above
+  reader.readAsText(theFile);
+}
+
+document
+  .getElementById("file-input")
+  .addEventListener("change", function (event) {
     const file = event.target.files[0];
     if (file) {
-        readFile(file);
+      readFile(file);
     }
-});
+  });
 
 function toggleMode(init = false) {
   // Show/hide/setup renderers depending on mode
   if (params.mode === "Ascii") {
     setupAscii();
+    setupAsciify();
     customAsciifier.renderers().get("brightness").enable();
   } else if (params.mode === "Dither") {
-    customAsciifier.renderers().get("brightness").disable();
-      setupDither();
+    if (isAsciiInitialized) {
+      customAsciifier.renderers().get("brightness").disable();
+    }
+    removeAsciifier();
+    setupDither();
   } else if (params.mode === "ShaderDither") {
-    customAsciifier.renderers().get("brightness").disable();
+    if (isAsciiInitialized) {
+      customAsciifier.renderers().get("brightness").disable();
+    }
+    removeAsciifier();
     setupShaderDither();
-  }
-   else {
+  } else {
     console.error("Invalid mode");
   }
   updateGui();
@@ -599,10 +608,7 @@ function isMouseOverGUI() {
   // console.log(rect);
   // console.log(mouseX, mouseY);
   // console.log(width - rect.width, rect.height);
-  return (
-    mouseX >= width - rect.width &&
-    mouseY <= rect.height
-  );
+  return mouseX >= width - rect.width && mouseY <= rect.height;
 }
 //add keypressed for a and A
 function keyPressed() {
