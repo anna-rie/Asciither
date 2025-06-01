@@ -73,7 +73,6 @@ let cam1;
 let cam2;
 let cam3;
 let dither_fs;
-let isShaderActive = true;
 let shaderDither;
 let bayerImage;
 // let asciified;
@@ -180,14 +179,7 @@ let isAsciiInitialized = false;
 
 function removeAsciifier() {
   if (customAsciifier) {
-    customAsciifier.renderers().get("brightness").disable();
-
     p5asciify.remove(customAsciifier);
-    customAsciifier = null;
-  }
-  if (customFramebuffer) {
-    customFramebuffer.remove();
-    customFramebuffer = null;
   }
 }
 
@@ -196,12 +188,8 @@ function setupAsciify() {
   if (params.mode === "Ascii") {
     console.log("setupAsciify fr fr");
 
-    if (!customFramebuffer) {
-      customFramebuffer = createFramebuffer();
-    }
-    if (!customAsciifier) {
-      customAsciifier = p5asciify.add(customFramebuffer);
-    }
+    customFramebuffer = createFramebuffer();
+    customAsciifier = p5asciify.add(customFramebuffer);
 
     customAsciifier.fontSize(params.fontSize);
 
@@ -425,9 +413,7 @@ function setupShaderDither() {
   pg3 = createGraphics(width, height, WEBGL);
   pg3.pixelDensity(1);
   cam3 = pg3.createCamera(); // st-o orbit control
-  if (!dither_fs) {
-    dither_fs = createFilterShader(dither_src);
-  }
+  dither_fs = createFilterShader(dither_src);
 }
 
 function drawShaderDither() {
@@ -460,10 +446,7 @@ function drawShaderDither() {
 
   image(pg3, -width / 2, -height / 2);
 
-  if (isShaderActive) {
-    console.log("apply filter");
-    filter(dither_fs);
-  }
+  filter(dither_fs);
 }
 
 /* ASCII + DITHER FUNCTIONS */
@@ -588,16 +571,11 @@ document
   });
 
 function toggleMode(init = false) {
-  if (params.mode !== "ShaderDither" && pg3) {
-    pg3.remove(); // remove pg3 if it exists
-    pg3 = null;
-  }
   // Show/hide/setup renderers depending on mode
   if (params.mode === "Ascii") {
     setupAscii();
     setupAsciify();
     customAsciifier.renderers().get("brightness").enable();
-    console.log(customAsciifier);
   } else if (params.mode === "Dither") {
     if (isAsciiInitialized) {
       customAsciifier.renderers().get("brightness").disable();
@@ -607,8 +585,6 @@ function toggleMode(init = false) {
   } else if (params.mode === "ShaderDither") {
     if (isAsciiInitialized) {
       customAsciifier.renderers().get("brightness").disable();
-      console.log(customAsciifier);
-      console.log(p5asciify.renderers().get("brightness"));
     }
     removeAsciifier();
     setupShaderDither();
@@ -636,8 +612,6 @@ function isMouseOverGUI() {
 }
 //add keypressed for a and A
 function keyPressed() {
-  console.log("keyPressed EVENT detected, key:", key); // <-- ADD THIS LINE
-
   if (!isMouseOverGUI()) {
     if (key === "a" || key === "A") {
       debugDisableAscii = !debugDisableAscii;
@@ -646,10 +620,6 @@ function keyPressed() {
       } else {
         customAsciifier.renderers().get("brightness").enable();
       }
-    }
-    if (key === "s" || key === "S") {
-      isShaderActive = !isShaderActive;
-      console.log("shader debug toggle");
     }
   }
 }
