@@ -1,5 +1,3 @@
-// <script src="https://cdn.jsdelivr.net/npm/p5.asciify@0.9.6/dist/p5.asciify.umd.min.js"></script>
-
 /* CUSTOM FUNCTIONS FOR P5LIVE */
 // keep fullscreen if window resized
 function windowResized() {
@@ -30,7 +28,7 @@ let gui;
 let guiDom;
 let asciiFolder, ditherFolder, sharedFolder, shaderDitherFolder;
 let params = {
-  mode: "ShaderDither", // Ascii, Dither, ShaderDither
+  mode: "Ascii",
   bgColor: "#000000",
   transparency: false,
   mainColor: "#ff0000",
@@ -95,16 +93,13 @@ function preload() {
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   pixelDensity(1);
-  setupAscii();
-  // setupDither();
-  setupShaderDither();
-  // if (params.mode === "Ascii") {
-  //     setupAscii();
-  //   } else if (params.mode === "Dither") {
-  //     setupDither();
-  //   } else if (params.mode === "ShaderDither") {
-  //     setupShaderDither();
-  //   }
+  if (params.mode === "Ascii") {
+    setupAscii();
+  } else if (params.mode === "Dither") {
+    setupDither();
+  } else if (params.mode === "ShaderDither") {
+    setupShaderDither();
+  }
   setupShared(); //setup gui in there
 }
 
@@ -135,101 +130,32 @@ function draw() {
 /* ASCII CODE SECTION */
 
 function setupAscii() {
-  console.log("setupAscii");
-  // sketchFramebuffer = createFramebuffer({
-  //   format: FLOAT,
-  // });
+  sketchFramebuffer = createFramebuffer({
+    format: FLOAT,
+  });
 
   pg1 = createGraphics(width, height, WEBGL);
   pg1.pixelDensity(1);
   cam1 = pg1.createCamera(); // st-o orbit control
 
-  // customFramebuffer = createFramebuffer();
-  // pg1Asciifier = p5asciify.add(pg1); //not working <--------------------------------------------------- PROBLEM
-  // pg1Asciifier.fontSize(params.fontSize);
-  // pg1Asciifier.background([0, 0, 0, 0]); // transparent background
-
-  // pg1Asciifier.renderers().get("brightness").update({ //can i have variables in here?
-  //   enabled: true,
-  //   characters: params.charactersInput,
-  //   characterColor: params.bgColor,
-  //   fontSize: params.fontSize,
-  //   backgroundColor: "#000000",
-  //   background: [0, 0, 0, 0], // transparent background
-  //   invertMode: params.invertAscii,
-  // });
-
-  // pg1Asciifier.background([0, 0, 0, 0]); // transparent background
-
-  // pg1.background(0);
-  // fill(255, 0, 0, 50);
-  // let c = color(params.mainColor);
-  // c.setAlpha(params.fontAlpha * 255); //convert to 0-255
-  // pg1.fill(c);
-}
-
-let defaultAsciifier;
-
-let customAsciifier;
-let customFramebuffer;
-
-let isAsciiInitialized = false;
-
-// let brightnessRenderer;
-
-function removeAsciifier() {
-  if (customAsciifier) {
-    p5asciify.remove(customAsciifier);
-  }
-}
-
-// was hier drin müsste ich in anderen modi wieder resetten?? und welche teile in setupAscii? <------------- PROBLEM (Stand Mami 29.5.25)
-function setupAsciify() {
-  if (params.mode === "Ascii") {
-    console.log("setupAsciify fr fr");
-
-    customFramebuffer = createFramebuffer();
-    customAsciifier = p5asciify.add(customFramebuffer);
-
-    customAsciifier.fontSize(params.fontSize);
-
-    customAsciifier.renderers().get("brightness").update({
-      enabled: true,
-      characters: params.charactersInput,
-      characterColor: params.mainColor,
-      backgroundColor: params.bgColor,
-      invertMode: params.invertAscii,
-    });
-
-    customAsciifier.background("[0, 0, 0, 0]"); // transparent background
-
-    isAsciiInitialized = true; // set flag to true
-  }
-  // defaultAsciifier = p5asciify.asciifier();
-  // customAsciifier = p5asciify.asciifier();
-
-  // p5asciify.fontSize(params.fontSize);
-
-  //console.log("setupAsciify");
-  //p5asciify.renderers().get("brightness").invert(true);
-  // p5asciify.renderers().get("brightness").update({
-  //   characters: "%&asdf0123456789",
-  // });
+  pg1.background(0);
+  fill(255, 0, 0, 50);
+  let c = color(params.mainColor);
+  c.setAlpha(params.fontAlpha * 255); //convert to 0-255
+  pg1.fill(c);
 }
 
 function drawAscii() {
+  p5asciify.fontSize(params.fontSize);
+  p5asciify.renderers().get("brightness").update({
+    characters: params.charactersInput,
+  });
+  p5asciify.background([0, 0, 0, 0]);
+  sketchFramebuffer.begin(); //turn this back on if possible
   clear();
-  //   // background(params.bgColor);
-
-  //   // p5asciify.fontSize(params.fontSize);
-  //   // p5asciify.renderers().get("brightness").update({
-  //   //   characters: params.charactersInput,
-  //   // });
-  //   // p5asciify.background([0, 0, 0, 0]);
-  //   // sketchFramebuffer.begin(); //turn this back on if possible
-
-  pg1.clear();
   pg1.push();
+  pg1.clear();
+  // pg1.background(params.bgColor);
   pg1.lights();
   pg1.directionalLight(
     red(params.lightColor) * params.lightIntensity,
@@ -240,8 +166,9 @@ function drawAscii() {
     params.lightZ
   );
 
-  customFramebuffer.begin();
-  clear();
+  // if (!isMouseOverGUI()) {
+  //   orbitControl(4, 4, 0.3);
+  // }
 
   pg1.rotateY(rotationY);
   pg1.noStroke();
@@ -250,41 +177,33 @@ function drawAscii() {
   c.setAlpha(params.fontAlpha * 255); //convert to 0-255
   pg1.fill(c);
 
-  if (params.normalMaterial) {
-    pg1.normalMaterial();
+  if (params.invertAscii) {
+    p5asciify.renderers().get("brightness").invert(true);
+  } else {
+    p5asciify.renderers().get("brightness").invert(false);
   }
 
-  if (params.invertAscii) {
-    customAsciifier.renderers().get("brightness").invert(true);
-  } else {
-    customAsciifier.renderers().get("brightness").invert(false);
+  if (params.normalMaterial) {
+    pg1.normalMaterial();
   }
 
   pg1.scale(-3);
   pg1.model(obj);
   pg1.pop();
 
-  customAsciifier.fontSize(params.fontSize);
-
-  customAsciifier.renderers().get("brightness").update({
-    characters: params.charactersInput,
-    characterColor: params.mainColor,
-    fontSize: params.fontSize,
-    invertMode: params.invertAscii,
-  });
-
-  image(pg1, -width / 2, -height / 2); // draw the pg1 graphics to the canvas
-  customFramebuffer.end();
+  image(pg1, -width / 2, -height / 2);
+  sketchFramebuffer.end();
+  // let asciified = p5asciify(pg1);
+  image(sketchFramebuffer, -windowWidth / 2, -windowHeight / 2); //or asciified instead of sketchFramebuffer
 }
 
-function drawAsciify() {
-  //clear();
-  if (params.mode === "Ascii") {
-    background(params.bgColor);
-    image(customAsciifier.texture, -width / 2, -height / 2);
-  }
-
-  // image(pg1, -width / 2, -height / 2); // draw the pg1 graphics to the canvas
+function setupAsciify() {
+  p5asciify.fontSize(params.fontSize);
+  //console.log("setupAsciify");
+  //p5asciify.renderers().get("brightness").invert(true);
+  // p5asciify.renderers().get("brightness").update({
+  //   characters: "%&asdf0123456789",
+  // });
 }
 
 /* DITHER CODE SECTION */
@@ -409,7 +328,6 @@ function drawDither() {
 /* SHADER DITHER CODE SECTION */
 
 function setupShaderDither() {
-  console.log("setupShaderDither");
   pg3 = createGraphics(width, height, WEBGL);
   pg3.pixelDensity(1);
   cam3 = pg3.createCamera(); // st-o orbit control
@@ -463,7 +381,7 @@ function setupGui() {
   sharedFolder = gui.addFolder("Settings");
   sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
   sharedFolder
-    .add(params, "mode", ["Ascii", "ShaderDither"]) // removed "Dither" :) RIP
+    .add(params, "mode", ["Ascii", "Dither", "ShaderDither"])
     .name("Render Mode")
     .onChange(toggleMode);
   sharedFolder.addColor(params, "bgColor").name("BG Color");
@@ -488,8 +406,8 @@ function setupGui() {
     .add(params, "fontSize", 5, 60, 1)
     .name("Font Size")
     .onChange((val) => {
-      if (typeof customAsciifier !== "undefined") {
-        customAsciifier.fontSize(val);
+      if (typeof p5asciify !== "undefined") {
+        p5asciify.fontSize(val);
       }
     });
   //asciiFolder.addColor(params, "fontColor").name("Font Color");
@@ -514,14 +432,13 @@ function setupGui() {
 }
 
 function handleAsciiCharsInput(value) {
-  console.log("handle ascii chars");
   if (value.length > 20) {
     params.charactersInput = value.substring(0, 20); //or slice?
   }
-  customAsciifier.renderers().get("brightness").update({
+  p5asciify.renderers().get("brightness").update({
     characters: value,
   });
-  // console.log("ASCII characters: " + params.charactersInput);
+  console.log("ASCII characters: " + params.charactersInput);
 }
 
 function updateGui() {
@@ -543,6 +460,7 @@ function updateGui() {
     toggleFolder(ditherFolder, false);
     toggleFolder(shaderDitherFolder, true);
     shaderDitherFolder.open();
+    console.log("shader dither mode");
   } else {
     console.log("none of the modes");
     console.error("Invalid mode");
@@ -574,19 +492,12 @@ function toggleMode(init = false) {
   // Show/hide/setup renderers depending on mode
   if (params.mode === "Ascii") {
     setupAscii();
-    setupAsciify();
-    customAsciifier.renderers().get("brightness").enable();
+    p5asciify.renderers().get("brightness").enable();
   } else if (params.mode === "Dither") {
-    if (isAsciiInitialized) {
-      customAsciifier.renderers().get("brightness").disable();
-    }
-    removeAsciifier();
+    p5asciify.renderers().get("brightness").disable();
     setupDither();
   } else if (params.mode === "ShaderDither") {
-    if (isAsciiInitialized) {
-      customAsciifier.renderers().get("brightness").disable();
-    }
-    removeAsciifier();
+    p5asciify.renderers().get("brightness").disable();
     setupShaderDither();
   } else {
     console.error("Invalid mode");
@@ -616,9 +527,9 @@ function keyPressed() {
     if (key === "a" || key === "A") {
       debugDisableAscii = !debugDisableAscii;
       if (debugDisableAscii) {
-        customAsciifier.renderers().get("brightness").disable();
+        p5asciify.renderers().get("brightness").disable();
       } else {
-        customAsciifier.renderers().get("brightness").enable();
+        p5asciify.renderers().get("brightness").enable();
       }
     }
   }
