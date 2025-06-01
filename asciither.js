@@ -17,10 +17,12 @@ function println(msg) {
 }
 /* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
 /* what next:
-transparency
+clean up code!! isAsciiInitialized, removeAsciifier, brightness renderers disable, defaultAsciify, toggleMode and all functions or stuff that should be in functions
+transparency –> done
 add gradient to ascii graphics layer! :)
 add material (jpg!!) as texture, move ascii to graphicslayer, fake orbit control for both modes... (fake orbit control link ted) 
 light colors?, color gradient to object, experimentation, export options, import videos too, layers, background images / objects */
+
 /* CODE */
 /* ASCII + DITHER SETUP */
 
@@ -180,6 +182,7 @@ let isAsciiInitialized = false;
 
 function removeAsciifier() {
   if (customAsciifier) {
+    defaultAsciifier.renderers().get("brightness").disable();
     customAsciifier.renderers().get("brightness").disable();
 
     p5asciify.remove(customAsciifier);
@@ -193,6 +196,9 @@ function removeAsciifier() {
 
 // was hier drin müsste ich in anderen modi wieder resetten?? und welche teile in setupAscii? <------------- PROBLEM (Stand Mami 29.5.25)
 function setupAsciify() {
+  defaultAsciifier = p5asciify.asciifier(); //test
+  defaultAsciifier.renderers().get("brightness").disable();
+
   if (params.mode === "Ascii") {
     console.log("setupAsciify fr fr");
 
@@ -461,14 +467,24 @@ function drawShaderDither() {
   image(pg3, -width / 2, -height / 2);
 
   if (isShaderActive) {
-    console.log("apply filter");
+    // console.log("apply filter");
     filter(dither_fs);
   }
 }
 
 /* ASCII + DITHER FUNCTIONS */
 
+// make an enum with Ascii, Dither, ShaderDither
+
 function setupShared() {
+  if (params.mode !== "Ascii") {
+    removeAsciifier();
+    console.log(isAsciiInitialized);
+    if (isAsciiInitialized) {
+      console.log("disabling ascii renderers");
+      customAsciifier.renderers().get("brightness").disable();
+    }
+  }
   setupGui();
 }
 
@@ -588,11 +604,12 @@ document
   });
 
 function toggleMode(init = false) {
-  if (params.mode !== "ShaderDither" && pg3) {
-    pg3.remove(); // remove pg3 if it exists
-    pg3 = null;
-  }
+  // if (params.mode !== "ShaderDither" && pg3) {
+  //   pg3.remove(); // remove pg3 if it exists
+  //   pg3 = null;
+  // }
   // Show/hide/setup renderers depending on mode
+
   if (params.mode === "Ascii") {
     setupAscii();
     setupAsciify();
@@ -608,7 +625,7 @@ function toggleMode(init = false) {
     if (isAsciiInitialized) {
       customAsciifier.renderers().get("brightness").disable();
       console.log(customAsciifier);
-      console.log(p5asciify.renderers().get("brightness"));
+      // console.log(p5asciify.renderers().get("brightness"));
     }
     removeAsciifier();
     setupShaderDither();
