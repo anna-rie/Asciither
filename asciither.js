@@ -31,10 +31,19 @@ let obj;
 let gui;
 let guiDom;
 let asciiFolder, ditherFolder, sharedFolder, shaderDitherFolder;
+let exportButtonController;
+let exportLengthController;
+let exportFramesController;
+
 let params = {
   mode: "ShaderDither", // Ascii, Dither, ShaderDither
+  exportMode: "png", //png, mp4, webm
+  myFramerate: 25,
+  exportLength: 2,
+  exportFrames: 50, //both two seconds at 25 fps
   bgColor: "#000000",
   transparency: false,
+  rotSpeed: 1.0, // rotation speed
   mainColor: "#ff0000",
   color1: "#00ff00",
   color2: "#0000ff",
@@ -53,9 +62,39 @@ let params = {
   ditherColor: "#000000",
   ditherSize: 1.0,
 };
+
+capture = P5Capture.getInstance();
+
 let actions = {
   uploadObj: () => {
     document.getElementById("file-input").click();
+  },
+  exportMedia: () => {
+    let captureOptions = {
+      framerate: params.myFramerate,
+    };
+    if (params.exportMode === "png") {
+      captureOptions.format = "png";
+      captureOptions.duration = params.exportFrames;
+    } else if (params.exportMode === "mp4") {
+      captureOptions.format = "mp4";
+      captureOptions.duration = params.exportLength * params.myFramerate;
+    } else if (params.exportMode === "webm") {
+      captureOptions.format = "webm";
+      captureOptions.duration = params.exportLength * params.myFramerate;
+    } else if (params.exportMode === "gif") {
+      captureOptions.format = "gif";
+      captureOptions.duration = params.exportLength * params.myFramerate;
+    }
+    console.log(`Starting ${params.exportFormat} export:`, captureOptions);
+    exportButtonController.name("🔴 Exporting Video"); // Update button label when starting
+    capture.start(captureOptions);
+  },
+  exportCancel: () => {
+    if (capture.state() === "recording" || capture.state() === "encoding") {
+      capture.stop();
+      exportButtonController.name("Export Video");
+    } // reset button label
   },
 };
 // use local storage here maybe
@@ -89,8 +128,18 @@ let bayerMatrix = [
 let matrixSize = 4;
 let thresholdMap = [];
 // ---
+P5Capture.setDefaultOptions({
+  // format: "png",
+  // framerate: 10,
+  // quality: 0.5,
+  disableUi: true,
+});
+
 function preload() {
   obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
+  // P5Capture.getInstance();
+  // console log the capture instance
+  console.log(P5Capture.getInstance());
   // shaderDither = loadShader("shaders/dither.vert", "shaders/dither.frag");
   // bayerImage = loadImage("textures/bayer.png");
 }
@@ -98,6 +147,23 @@ function preload() {
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   pixelDensity(1);
+
+  // // Add event listeners to P5Capture's recorder
+  //   capture.recorder.on('start', () => {
+  //     console.log("Capture started");
+  //     exportButtonController.name("🔴 Exporting Video");
+  //   });
+
+  //   capture.recorder.on('stop', () => {
+  //     console.log("Capture stopped");
+  //     exportButtonController.name("Export Video");
+  //   });
+
+  //   capture.recorder.on('error', (error) => {
+  //     console.error("Capture error:", error);
+  //     exportButtonController.name("Export Video");
+  //   });
+
   setupAscii();
   // setupDither();
   setupShaderDither();
@@ -112,12 +178,16 @@ function setup() {
 }
 
 function draw() {
-  rotationY -= 0.0009 * deltaTime;
+  rotationY -= 0.0009 * deltaTime * (-1 * params.rotSpeed);
   // ambientLight(100);
   // lights();
   clear();
-  background(params.bgColor);
-
+  // background(params.bgColor);
+  if (params.transparency) {
+    clear();
+  } else {
+    background(params.bgColor);
+  }
   directionalLight(
     red(params.lightColor) * params.lightIntensity,
     green(params.lightColor) * params.lightIntensity,
@@ -132,6 +202,10 @@ function draw() {
     drawDither();
   } else if (params.mode === "ShaderDither") {
     drawShaderDither();
+  }
+
+  if (capture.state === "idle") {
+    exportButtonController.name("Export Video");
   }
 }
 
@@ -298,7 +372,11 @@ function drawAscii() {
 function drawAsciify() {
   //clear();
   if (params.mode === "Ascii") {
-    background(params.bgColor);
+    if (params.transparency) {
+      clear(0, 0, 0, 0);
+    } else {
+      background(params.bgColor);
+    }
     image(customAsciifier.texture, -width / 2, -height / 2);
   }
 
@@ -441,7 +519,11 @@ function drawShaderDither() {
   pg3.push();
   //add ambient light
   // pg3.ambientLight(100);
-  pg3.background(params.bgColor);
+  pg3.clear();
+  if (!params.transparency) {
+    pg3.background(params.bgColor);
+    // pg3.clear(0, 0, 0, 0);
+  }
   pg3.camera(cam3.eyeX, cam3.eyeY, cam3.eyeZ, 0, 0, 0, 0, 1, 0); //lock to cam3 (?)
   pg3.scale(-3);
   pg3.rotateY(rotationY);
@@ -496,14 +578,62 @@ function setupGui() {
   sharedFolder = gui.addFolder("Settings");
   sharedFolder.add(actions, "uploadObj").name("Upload OBJ");
   sharedFolder
+    .add(params, "exportMode", ["png", "mp4", "webm", "gif"])
+    .name("Export Format")
+    .onChange(() => {
+      updateGui();
+    });
+
+  exportLengthController = sharedFolder
+    .add(params, "exportLength", 1, 20)
+    .step(1)
+    .name("Export Duration (s)");
+  let maxFrames = getFramesForOneRotation();
+  exportFramesController = sharedFolder
+    .add(params, "exportFrames", 1, maxFrames)
+    .step(1)
+    .name("Export Frames")
+    .onChange((value) => {
+      updateFrameSliderLabel(value, maxFrames);
+    });
+  exportButtonController = sharedFolder
+    .add(actions, "exportMedia")
+    .name("Export Video");
+  sharedFolder
+    .add(params, "rotSpeed", -10, 10)
+    .step(1)
+    .name("Rotation Speed")
+    .onChange(() => {
+      const oldMaxFrames = maxFrames;
+      maxFrames = getFramesForOneRotation();
+
+      // Scale the current frame count proportionally to the new range <--- didn't try to understand yet
+      if (oldMaxFrames !== maxFrames) {
+        params.exportFrames = Math.round(
+          (params.exportFrames / oldMaxFrames) * maxFrames
+        );
+      }
+
+      exportFramesController.max(maxFrames);
+      // If current value is still above new max (can happen due to rounding), clamp it
+      if (params.exportFrames > maxFrames) {
+        params.exportFrames = maxFrames;
+      }
+
+      updateFrameSliderLabel(params.exportFrames, maxFrames);
+      exportFramesController.updateDisplay(); // Force GUI to update the slider position
+      updateGui();
+    });
+  // sharedFolder.add(actions, "exportMedia").name("Export Video");
+  sharedFolder
     .add(params, "mode", ["Ascii", "ShaderDither"]) // removed "Dither" :) RIP
     .name("Render Mode")
     .onChange(toggleMode);
   sharedFolder.addColor(params, "bgColor").name("BG Color");
   sharedFolder.add(params, "transparency").name("Transparency");
   sharedFolder.addColor(params, "mainColor").name("Main Color");
-  sharedFolder.addColor(params, "color1").name("Color 1");
-  sharedFolder.addColor(params, "color2").name("Color 2");
+  // sharedFolder.addColor(params, "color1").name("Color 1");
+  // sharedFolder.addColor(params, "color2").name("Color 2");
   sharedFolder.add(params, "normalMaterial").name("Normal Material");
 
   sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
@@ -557,9 +687,48 @@ function handleAsciiCharsInput(value) {
   // console.log("ASCII characters: " + params.charactersInput);
 }
 
+function getFramesForOneRotation() {
+  if (params.rotSpeed === 0) {
+    return 250;
+  }
+
+  const baseRotationSpeed = 0.0009; // from your draw() function
+  const actualRotationSpeed = baseRotationSpeed * (-1 * params.rotSpeed);
+  const averageDeltaTime = 1000 / params.myFramerate; // milliseconds per frame
+  const rotationPerFrame = Math.abs(actualRotationSpeed * averageDeltaTime);
+  const framesForFullRotation = Math.ceil((2 * Math.PI) / rotationPerFrame);
+  console.log("Frames for full rotation: " + framesForFullRotation);
+  return framesForFullRotation;
+}
+
+function updateFrameSliderLabel(currentValue, maxValue) {
+  if (currentValue >= maxValue) {
+    exportFramesController.name("One Rotation");
+  } else {
+    exportFramesController.name("Export Frames");
+  }
+}
+
 function updateGui() {
   //decide which folders to show and hide
   sharedFolder.open();
+  if (params.exportMode === "png") {
+    exportFramesController.domElement.parentElement.parentElement.style.display =
+      "";
+    exportLengthController.domElement.parentElement.parentElement.style.display =
+      "none";
+
+    maxFrames = getFramesForOneRotation();
+    console.log("maxFrames: " + maxFrames);
+    updateFrameSliderLabel(params.exportFrames, maxFrames);
+    console.log(exportFramesController);
+  } else {
+    exportFramesController.domElement.parentElement.parentElement.style.display =
+      "none";
+    exportLengthController.domElement.parentElement.parentElement.style.display =
+      "";
+  }
+
   if (params.mode === "Ascii") {
     toggleFolder(ditherFolder, false);
     toggleFolder(shaderDitherFolder, false);
@@ -579,6 +748,15 @@ function updateGui() {
   } else {
     console.log("none of the modes");
     console.error("Invalid mode");
+  }
+}
+
+function toggleFolder(folder, show) {
+  //show or hide the folder
+  if (show) {
+    folder.domElement.style.display = "";
+  } else {
+    folder.domElement.style.display = "none";
   }
 }
 
@@ -635,15 +813,6 @@ function toggleMode(init = false) {
   updateGui();
 }
 
-function toggleFolder(folder, show) {
-  //show or hide the folder
-  if (show) {
-    folder.domElement.style.display = "";
-  } else {
-    folder.domElement.style.display = "none";
-  }
-}
-
 function isMouseOverGUI() {
   const rect = guiDom.getBoundingClientRect();
   // console.log(rect);
@@ -667,6 +836,9 @@ function keyPressed() {
     if (key === "s" || key === "S") {
       isShaderActive = !isShaderActive;
       console.log("shader debug toggle");
+    }
+    if (key === "p" || key === "P") {
+      saveCanvas("test-transparency", "png");
     }
   }
 }
@@ -812,7 +984,10 @@ float dither8x8(vec2 position, float brightness) {
  
 vec3 dither8x8(vec2 position, vec3 color) {
   float factor = dither8x8(position, luma(color)); //return color * dither8x8(position, luma(color));
+  //old line:
   return mix(ditherColor, color, factor); //0.0 = ditherColor, 1.0 = original color
+  //new line:
+  return factor < 0.5 ? vec3(0.0) : color;
 }
  
 vec4 dither8x8(vec2 position, vec4 color) {
@@ -846,14 +1021,15 @@ vec4 dither2x2(vec2 position, vec4 color) {
  
 void main() {
   vec2 uv = vTexCoord;
-
   float scale = 0.5;
   vec2 scaledCoord = gl_FragCoord.xy * ditherSize;
 
-  vec3 texColor = texture2D(tex0, uv).rgb;
-  vec3 finalColor = dither8x8(scaledCoord, texColor);
-
-  gl_FragColor = vec4(finalColor, 1.0);
+  vec4 texColor = texture2D(tex0, uv);
+  vec3 finalColor = dither8x8(scaledCoord, texColor.rgb);
+  
+  // Use original alpha and make dithered areas transparent
+  float alpha = length(finalColor) < 0.01 ? 0.0 : texColor.a;
+  gl_FragColor = vec4(finalColor, alpha);
 }
   `;
 
