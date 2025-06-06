@@ -17,6 +17,7 @@ function println(msg) {
 }
 /* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
 /* what next:
+max frames calculation is a bit off (not enough frames), maybe angle mode or smth else in the calc?
 clean up code!! isAsciiInitialized, removeAsciifier, brightness renderers disable, defaultAsciify, toggleMode and all functions or stuff that should be in functions
 transparency –> done
 add gradient to ascii graphics layer! :)
@@ -36,15 +37,15 @@ let exportLengthController;
 let exportFramesController;
 
 let params = {
-  mode: "ShaderDither", // Ascii, Dither, ShaderDither
+  mode: "Ascii", // Ascii, Dither, ShaderDither
   exportMode: "png", //png, mp4, webm
   myFramerate: 25,
   exportLength: 2,
   exportFrames: 50, //both two seconds at 25 fps
-  bgColor: "#000000",
+  bgColor: "#111111",
   transparency: false,
   rotSpeed: 1.0, // rotation speed
-  mainColor: "#ff0000",
+  mainColor: "#00ff00",
   color1: "#00ff00",
   color2: "#0000ff",
   lightX: 100, // <--------------------- light doesn't work yet
@@ -105,6 +106,9 @@ let pg1;
 let pg2;
 let pg3;
 let rotationY = 0;
+
+let isRecording = false;
+
 // --- st-o orbit control
 const sensitivityX = 1;
 const sensitivityY = 0.5;
@@ -178,7 +182,18 @@ function setup() {
 }
 
 function draw() {
-  rotationY -= 0.0009 * deltaTime * (-1 * params.rotSpeed);
+  //or do this after updating isRecording? -> at the end of draw() rn
+  if (isRecording) {
+    // rotationY = (frameCount / totalFrames) * TWO_PI;
+    rotationY += TWO_PI / maxFrames; //nicht / params.exportFrames sonst gibt es immer ganze umdrehung
+    console.log("isRecording: " + isRecording + ", rotationY: " + rotationY);
+  } else {
+    rotationY += 0.0009 * deltaTime * params.rotSpeed;
+    // console.log("deltaTime " + deltaTime);
+    // let fps = frameRate();
+    // console.log("FPS " + fps);
+    // console.log(0.0009 * deltaTime * params.rotSpeed);
+  }
   // ambientLight(100);
   // lights();
   clear();
@@ -205,7 +220,12 @@ function draw() {
   }
 
   if (capture.state === "idle") {
+    isRecording = false;
     exportButtonController.name("Export Video");
+    console.log("Capture is idle");
+  } else if (capture.state === "capturing") {
+    isRecording = true;
+    console.log("capture is capturing");
   }
 }
 
@@ -689,14 +709,23 @@ function handleAsciiCharsInput(value) {
 
 function getFramesForOneRotation() {
   if (params.rotSpeed === 0) {
-    return 250;
+    return 1;
   }
+  // const baseRotationSpeed = 0.0009; // radians per millisecond
+  // const actualRotationSpeed = baseRotationSpeed * params.rotSpeed; // remove -1 since we want magnitude
+  // const millisecondsPerFrame = 1000 / params.myFramerate;
+  // const radiansPerFrame = actualRotationSpeed * millisecondsPerFrame;
+  // let framesForFullRotation = Math.ceil((2 * Math.PI) / radiansPerFrame);
 
-  const baseRotationSpeed = 0.0009; // from your draw() function
-  const actualRotationSpeed = baseRotationSpeed * (-1 * params.rotSpeed);
-  const averageDeltaTime = 1000 / params.myFramerate; // milliseconds per frame
-  const rotationPerFrame = Math.abs(actualRotationSpeed * averageDeltaTime);
-  const framesForFullRotation = Math.ceil((2 * Math.PI) / rotationPerFrame);
+  console.log(
+    "Rotation Speed: " +
+      params.rotSpeed +
+      ", myFramerate: " +
+      params.myFramerate
+  );
+  let framesForFullRotation = (8 / params.rotSpeed) * params.myFramerate; // my definition: 8 seconds for one full rotation at 1x speed
+
+  // framesForFullRotation = captureOptions.duration * params.myFramerate;
   console.log("Frames for full rotation: " + framesForFullRotation);
   return framesForFullRotation;
 }
