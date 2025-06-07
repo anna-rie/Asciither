@@ -32,6 +32,7 @@ import videos too, layers, background images / objects */
 
 //let libs = ["libs/p5.asciify.umd.js"];
 let obj;
+let tex;
 let gui;
 let guiDom;
 let asciiFolder, ditherFolder, sharedFolder, shaderDitherFolder;
@@ -47,7 +48,7 @@ let presets = {
     myFramerate: 25,
     exportLength: 2,
     exportFrames: 50, //both two seconds at 25 fps
-    bgColor: "#222222",
+    bgColor: "#111111",
     transparency: false,
     rotSpeed: 1.0, // rotation speed
     mainColor: "#00ff00",
@@ -60,24 +61,28 @@ let presets = {
     lightIntensity: 5,
     fontSize: 10,
     fontColor: "#ff0000",
-    fontAlpha: 0.25,
+    fontAlpha: 0.4,
     invertAscii: false,
+    asciiBgColor: "#22142f",
     normalMaterial: false,
+    texture: false,
     charactersInput: "□│▒▓▀▄█", //0123456789 ; █▙▟▛▜▝▘▗▖▞▚▄▀▐●□■_ ; │▒▓▀▄█
     blockSize: 15,
     ditherColor: "#000000",
     ditherSize: 1.0,
   },
-  "01": {
+  "Dither Blue Normals": {
     mode: "ShaderDither",
     mainColor: "#0000ff",
     ditherSize: 0.4,
+    ditherColor: "#272764",
     normalMaterial: true,
   },
-  "02": {
+  "Ascii Big Red": {
     mode: "Ascii",
     mainColor: "#ff0000",
     bgColor: "#310000",
+    asciiBgColor: "#310000",
     charactersInput: "subscribe",
     fontSize: 30,
     fontAlpha: 0.75,
@@ -192,6 +197,7 @@ P5Capture.setDefaultOptions({
 
 function preload() {
   obj = loadModel("3d/dragon.obj", { normalize: true });
+  tex = loadImage("textures/dragon.png");
   // P5Capture.getInstance();
   // console log the capture instance
   console.log(P5Capture.getInstance());
@@ -360,7 +366,7 @@ function setupAsciify() {
       enabled: true,
       characters: params.charactersInput,
       characterColor: params.mainColor,
-      backgroundColor: params.bgColor,
+      backgroundColor: params.asciiBgColor,
       invertMode: params.invertAscii,
     });
 
@@ -402,7 +408,7 @@ function drawAscii() {
     params.lightY,
     params.lightZ
   );
-
+  // pg1.push();
   customFramebuffer.begin();
   clear();
 
@@ -424,6 +430,9 @@ function drawAscii() {
   }
 
   pg1.scale(-3);
+  if (params.texture) {
+    pg1.texture(tex);
+  }
   pg1.model(obj);
   pg1.pop();
 
@@ -432,6 +441,7 @@ function drawAscii() {
   customAsciifier.renderers().get("brightness").update({
     characters: params.charactersInput,
     characterColor: params.mainColor,
+    backgroundColor: params.asciiBgColor,
     fontSize: params.fontSize,
     invertMode: params.invertAscii,
   });
@@ -603,6 +613,9 @@ function drawShaderDither() {
     pg3.normalMaterial();
   }
   pg3.noStroke();
+  if (params.texture) {
+    pg3.texture(tex);
+  }
   pg3.model(obj);
   pg3.pop();
 
@@ -701,7 +714,7 @@ function setupGui() {
     .name("Render Mode")
     .onChange(toggleMode);
   sharedFolder
-    .add(params, "preset", ["Default", "01", "02"])
+    .add(params, "preset", ["Default", "Dither Blue Normals", "Ascii Big Red"])
     .name("Preset")
     .onChange(applyPreset);
   sharedFolder.addColor(params, "bgColor").name("BG Color");
@@ -710,7 +723,7 @@ function setupGui() {
   // sharedFolder.addColor(params, "color1").name("Color 1");
   // sharedFolder.addColor(params, "color2").name("Color 2");
   sharedFolder.add(params, "normalMaterial").name("Normal Material");
-
+  sharedFolder.add(params, "texture").name("Texture");
   sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
   sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
   sharedFolder.add(params, "lightZ", -500, 500).step(1).name("Light Z");
@@ -733,6 +746,7 @@ function setupGui() {
   //asciiFolder.addColor(params, "fontColor").name("Font Color");
   asciiFolder.add(params, "fontAlpha", 0, 1).step(0.01).name("Opacity");
   asciiFolder.add(params, "invertAscii").name("Invert");
+  asciiFolder.addColor(params, "asciiBgColor").name("Ascii BG Color");
   asciiFolder
     .add(params, "charactersInput")
     .name("Ascii Characters")
@@ -778,7 +792,8 @@ function getFramesForOneRotation() {
       ", myFramerate: " +
       params.myFramerate
   );
-  let framesForFullRotation = (8 / params.rotSpeed) * params.myFramerate; // my definition: 8 seconds for one full rotation at 1x speed
+  let framesForFullRotation =
+    (8 / Math.abs(params.rotSpeed)) * params.myFramerate; // my definition: 8 seconds for one full rotation at 1x speed
 
   // framesForFullRotation = captureOptions.duration * params.myFramerate;
   console.log("Frames for full rotation: " + framesForFullRotation);
