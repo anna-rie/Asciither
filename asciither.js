@@ -727,7 +727,7 @@ function setupGui() {
   sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
   sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
   sharedFolder.add(params, "lightZ", -500, 500).step(1).name("Light Z");
-  sharedFolder.addColor(params, "lightColor").name("Light Color");
+  // sharedFolder.addColor(params, "lightColor").name("Light Color");
   sharedFolder
     .add(params, "lightIntensity", 0, 100)
     .step(0.01)
