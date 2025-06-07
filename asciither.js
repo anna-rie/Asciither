@@ -17,12 +17,15 @@ function println(msg) {
 }
 /* –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––*/
 /* what next:
-max frames calculation is a bit off (not enough frames), maybe angle mode or smth else in the calc?
+presets! export import them, select from a dropdown, save current settings as preset (?)
+done: max frames calculation is a bit off (not enough frames), maybe angle mode or smth else in the calc?,
 clean up code!! isAsciiInitialized, removeAsciifier, brightness renderers disable, defaultAsciify, toggleMode and all functions or stuff that should be in functions
-transparency –> done
+done: transparency,
 add gradient to ascii graphics layer! :)
 add material (jpg!!) as texture, move ascii to graphicslayer, fake orbit control for both modes... (fake orbit control link ted) 
-light colors?, color gradient to object, experimentation, export options, import videos too, layers, background images / objects */
+light colors?, color gradient to object, experimentation, 
+done: export options,
+import videos too, layers, background images / objects */
 
 /* CODE */
 /* ASCII + DITHER SETUP */
@@ -36,32 +39,79 @@ let exportButtonController;
 let exportLengthController;
 let exportFramesController;
 
+let presets = {
+  Default: {
+    mode: "Ascii", // Ascii, Dither, ShaderDither
+    exportMode: "png", //png, mp4, webm
+    preset: "Default", // Default, 01, 02,
+    myFramerate: 25,
+    exportLength: 2,
+    exportFrames: 50, //both two seconds at 25 fps
+    bgColor: "#222222",
+    transparency: false,
+    rotSpeed: 1.0, // rotation speed
+    mainColor: "#00ff00",
+    color1: "#00ff00",
+    color2: "#0000ff",
+    lightX: 0, // <--------------------- light doesn't work yet
+    lightY: -200,
+    lightZ: -100,
+    lightColor: "#ffffff",
+    lightIntensity: 5,
+    fontSize: 10,
+    fontColor: "#ff0000",
+    fontAlpha: 0.25,
+    invertAscii: false,
+    normalMaterial: false,
+    charactersInput: "□│▒▓▀▄█", //0123456789 ; █▙▟▛▜▝▘▗▖▞▚▄▀▐●□■_ ; │▒▓▀▄█
+    blockSize: 15,
+    ditherColor: "#000000",
+    ditherSize: 1.0,
+  },
+  "01": {
+    mode: "ShaderDither",
+    mainColor: "#0000ff",
+    ditherSize: 0.4,
+    normalMaterial: true,
+  },
+  "02": {
+    mode: "Ascii",
+    mainColor: "#ff0000",
+    bgColor: "#310000",
+    charactersInput: "subscribe",
+    fontSize: 30,
+    fontAlpha: 0.75,
+  },
+};
+
 let params = {
-  mode: "Ascii", // Ascii, Dither, ShaderDither
-  exportMode: "png", //png, mp4, webm
-  myFramerate: 25,
-  exportLength: 2,
-  exportFrames: 50, //both two seconds at 25 fps
-  bgColor: "#111111",
-  transparency: false,
-  rotSpeed: 1.0, // rotation speed
-  mainColor: "#00ff00",
-  color1: "#00ff00",
-  color2: "#0000ff",
-  lightX: 100, // <--------------------- light doesn't work yet
-  lightY: 100,
-  lightZ: -200,
-  lightColor: "#ffffff",
-  lightIntensity: 5,
-  fontSize: 30,
-  fontColor: "#ff0000",
-  fontAlpha: 0.25,
-  invertAscii: false,
-  normalMaterial: false,
-  charactersInput: "□│▒▓▀▄█", //0123456789 ; █▙▟▛▜▝▘▗▖▞▚▄▀▐●□■_ ; │▒▓▀▄█
-  blockSize: 15,
-  ditherColor: "#000000",
-  ditherSize: 1.0,
+  ...presets.Default, // use the default preset
+  // mode: "Ascii", // Ascii, Dither, ShaderDither
+  // exportMode: "png", //png, mp4, webm
+  // preset: "Default", // Default, 01, 02,
+  // myFramerate: 25,
+  // exportLength: 2,
+  // exportFrames: 50, //both two seconds at 25 fps
+  // bgColor: "#222222",
+  // transparency: false,
+  // rotSpeed: 1.0, // rotation speed
+  // mainColor: "#00ff00",
+  // color1: "#00ff00",
+  // color2: "#0000ff",
+  // lightX: 100, // <--------------------- light doesn't work yet
+  // lightY: 100,
+  // lightZ: -200,
+  // lightColor: "#ffffff",
+  // lightIntensity: 5,
+  // fontSize: 30,
+  // fontColor: "#ff0000",
+  // fontAlpha: 0.25,
+  // invertAscii: false,
+  // normalMaterial: false,
+  // charactersInput: "□│▒▓▀▄█", //0123456789 ; █▙▟▛▜▝▘▗▖▞▚▄▀▐●□■_ ; │▒▓▀▄█
+  // blockSize: 15,
+  // ditherColor: "#000000",
+  // ditherSize: 1.0,
 };
 
 capture = P5Capture.getInstance();
@@ -89,6 +139,7 @@ let actions = {
     }
     console.log(`Starting ${params.exportFormat} export:`, captureOptions);
     exportButtonController.name("🔴 Exporting Video"); // Update button label when starting
+    rotationY = 0; // reset rotation for export
     capture.start(captureOptions);
   },
   exportCancel: () => {
@@ -140,7 +191,7 @@ P5Capture.setDefaultOptions({
 });
 
 function preload() {
-  obj = loadModel("3d/VoxelCat2.obj", { normalize: true });
+  obj = loadModel("3d/dragon.obj", { normalize: true });
   // P5Capture.getInstance();
   // console log the capture instance
   console.log(P5Capture.getInstance());
@@ -627,7 +678,7 @@ function setupGui() {
       const oldMaxFrames = maxFrames;
       maxFrames = getFramesForOneRotation();
 
-      // Scale the current frame count proportionally to the new range <--- didn't try to understand yet
+      // Scale the current frame count proportionally to the new range <--- haven't tried to understand yet
       if (oldMaxFrames !== maxFrames) {
         params.exportFrames = Math.round(
           (params.exportFrames / oldMaxFrames) * maxFrames
@@ -649,6 +700,10 @@ function setupGui() {
     .add(params, "mode", ["Ascii", "ShaderDither"]) // removed "Dither" :) RIP
     .name("Render Mode")
     .onChange(toggleMode);
+  sharedFolder
+    .add(params, "preset", ["Default", "01", "02"])
+    .name("Preset")
+    .onChange(applyPreset);
   sharedFolder.addColor(params, "bgColor").name("BG Color");
   sharedFolder.add(params, "transparency").name("Transparency");
   sharedFolder.addColor(params, "mainColor").name("Main Color");
@@ -789,6 +844,25 @@ function toggleFolder(folder, show) {
   }
 }
 
+function refreshGui() {
+  [sharedFolder, asciiFolder, ditherFolder, shaderDitherFolder].forEach(
+    (folder) => {
+      if (!folder) return;
+      folder.__controllers.forEach((controller) => controller.updateDisplay());
+    }
+  );
+}
+
+function applyPreset(presetName) {
+  console.log("applyPreset: " + presetName);
+  // params = { ...presets.Default, ...presets[presetName] };
+  Object.assign(params, presets.Default, presets[presetName]);
+  params.preset = presetName;
+  updateGui();
+  refreshGui(); //visually refresh the gui changes by updating display of the controllers
+  toggleMode(true); // re-apply mode settings
+}
+
 function readFile(theFile) {
   var reader = new FileReader();
   reader.onload = function (e) {
@@ -811,6 +885,7 @@ document
   });
 
 function toggleMode(init = false) {
+  console.log("toggleMode: " + params.mode);
   // if (params.mode !== "ShaderDither" && pg3) {
   //   pg3.remove(); // remove pg3 if it exists
   //   pg3 = null;
