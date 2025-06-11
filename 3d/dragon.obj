@@ -1,6 +1,6 @@
 # Blender 4.0.0
 # www.blender.org
-mtllib an_epic_dragon_floati_0607204202_texture.mtl
+mtllib dragon.mtl
 o an_epic_dragon_floati_0607204202_texture
 v -0.165813 -0.337005 -0.193417
 v -0.162909 -0.316898 -0.180166
