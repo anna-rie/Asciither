@@ -205,9 +205,30 @@ function preload() {
   // bayerImage = loadImage("textures/bayer.png");
 }
 
+let titleDiv;
+
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   pixelDensity(1);
+
+  titleDiv = createDiv("Ghastly Wither");
+  titleDiv.style("position", "absolute");
+  titleDiv.style("font-size", "24px");
+  titleDiv.style("font-family", "Basis Grotesque Pro Mono");
+  titleDiv.style("color", "#ffffff");
+  titleDiv.style("line-height", "0.9");
+  titleDiv.position(20, 20);
+
+  titleDiv.mouseOver(() => {
+    titleDiv.html(
+      'Ascii Dither <br> <br> <span style="font-size: 12px;">Explore how to asciify or dither your 3D object!<br>Test different presets and tweak the options, then <br>export as video, GIF or PNG sequence - even with <br>transparent background!</span>'
+    );
+  });
+
+  titleDiv.mouseOut(() => {
+    titleDiv.html("Ghastly Wither");
+    titleDiv.style("font-size", "24px"); // Reset style just in case
+  });
 
   // // Add event listeners to P5Capture's recorder
   //   capture.recorder.on('start', () => {
@@ -676,7 +697,7 @@ function setupGui() {
   exportFramesController = sharedFolder
     .add(params, "exportFrames", 1, maxFrames)
     .step(1)
-    .name("Export Frames")
+    .name("Frames")
     .onChange((value) => {
       updateFrameSliderLabel(value, maxFrames);
     });
@@ -724,14 +745,14 @@ function setupGui() {
   // sharedFolder.addColor(params, "color2").name("Color 2");
   sharedFolder.add(params, "normalMaterial").name("Normal Material");
   sharedFolder.add(params, "texture").name("Texture");
-  sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
-  sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
-  sharedFolder.add(params, "lightZ", -500, 500).step(1).name("Light Z");
-  // sharedFolder.addColor(params, "lightColor").name("Light Color");
-  sharedFolder
-    .add(params, "lightIntensity", 0, 100)
-    .step(0.01)
-    .name("Light Intensity");
+  // sharedFolder.add(params, "lightX", -500, 500).step(1).name("Light X");
+  // sharedFolder.add(params, "lightY", -500, 500).step(1).name("Light Y");
+  // sharedFolder.add(params, "lightZ", -500, 500).step(1).name("Light Z");
+  // // sharedFolder.addColor(params, "lightColor").name("Light Color");
+  // sharedFolder
+  //   .add(params, "lightIntensity", 0, 100)
+  //   .step(0.01)
+  //   .name("Light Intensity");
 
   //ascii folder
   asciiFolder = gui.addFolder("ASCII");
@@ -804,7 +825,7 @@ function updateFrameSliderLabel(currentValue, maxValue) {
   if (currentValue >= maxValue) {
     exportFramesController.name("One Rotation");
   } else {
-    exportFramesController.name("Export Frames");
+    exportFramesController.name("Frames");
   }
 }
 
