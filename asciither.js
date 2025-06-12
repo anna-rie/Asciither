@@ -164,6 +164,7 @@ let pg3;
 let rotationY = 0;
 
 let isRecording = false;
+let titleDiv;
 
 // --- st-o orbit control
 const sensitivityX = 1;
@@ -205,30 +206,9 @@ function preload() {
   // bayerImage = loadImage("textures/bayer.png");
 }
 
-let titleDiv;
-
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   pixelDensity(1);
-
-  titleDiv = createDiv("Ghastly Wither");
-  titleDiv.style("position", "absolute");
-  titleDiv.style("font-size", "24px");
-  titleDiv.style("font-family", "Basis Grotesque Pro Mono");
-  titleDiv.style("color", "#ffffff");
-  titleDiv.style("line-height", "0.9");
-  titleDiv.position(20, 20);
-
-  titleDiv.mouseOver(() => {
-    titleDiv.html(
-      'Ascii Dither <br> <br> <span style="font-size: 12px;">Explore how to asciify or dither your 3D object!<br>Test different presets and tweak the options, then <br>export as video, GIF or PNG sequence - even with <br>transparent background!</span>'
-    );
-  });
-
-  titleDiv.mouseOut(() => {
-    titleDiv.html("Ghastly Wither");
-    titleDiv.style("font-size", "24px"); // Reset style just in case
-  });
 
   // // Add event listeners to P5Capture's recorder
   //   capture.recorder.on('start', () => {
@@ -672,6 +652,25 @@ function setupShared() {
       customAsciifier.renderers().get("brightness").disable();
     }
   }
+  titleDiv = createDiv("Ghastly Wither");
+  titleDiv.style("position", "absolute");
+  titleDiv.style("font-size", "24px");
+  titleDiv.style("font-family", "Basis Grotesque Pro Mono");
+  titleDiv.style("color", "#ffffff");
+  titleDiv.style("line-height", "0.9");
+  titleDiv.position(20, 20);
+
+  titleDiv.mouseOver(() => {
+    titleDiv.html(
+      'Ascii Dither <br> <br> <span style="font-size: 12px;">Explore how to asciify or dither your 3D object!<br>Test different presets and tweak the options, then <br>export as video, GIF or PNG sequence - even with <br>transparent background!</span>'
+    );
+  });
+
+  titleDiv.mouseOut(() => {
+    titleDiv.html("Ghastly Wither");
+    titleDiv.style("font-size", "24px"); // Reset style just in case
+  });
+
   setupGui();
 }
 
@@ -778,7 +777,7 @@ function setupGui() {
   ditherFolder.add(params, "blockSize", 8, 25, 1).name("Pixel Size");
 
   //shader dither folder
-  shaderDitherFolder = gui.addFolder("Shader Dither");
+  shaderDitherFolder = gui.addFolder("Dither ");
   shaderDitherFolder.addColor(params, "ditherColor").name("Dither Color");
   shaderDitherFolder
     .add(params, "ditherSize", 0.1, 2.0, 0.1)
@@ -818,7 +817,7 @@ function getFramesForOneRotation() {
 
   // framesForFullRotation = captureOptions.duration * params.myFramerate;
   console.log("Frames for full rotation: " + framesForFullRotation);
-  return framesForFullRotation;
+  return Math.ceil(framesForFullRotation);
 }
 
 function updateFrameSliderLabel(currentValue, maxValue) {
